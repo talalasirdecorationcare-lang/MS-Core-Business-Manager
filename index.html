@@ -1672,215 +1672,7 @@ function renderExpenses() {
   });
 }
 
-/* =========================
-   ADVANCED RETURNS
-   ========================= */
-const returnType = document.getElementById("returnType");
-const returnRefSelect = document.getElementById("returnRefSelect");
-const returnReason = document.getElementById("returnReason");
-const returnItemsBody = document.getElementById("returnItemsBody");
 
-const returnSubtotalEl = document.getElementById("returnSubtotal");
-const returnDiscountEl = document.getElementById("returnDiscount");
-const returnChargeEl = document.getElementById("returnCharge");
-const returnVatEl = document.getElementById("returnVat");
-const returnTotalEl = document.getElementById("returnTotal");
-
-const returnAdjustCharge = document.getElementById("returnAdjustCharge");
-const returnAdjustDiscount = document.getElementById("returnAdjustDiscount");
-
-const returnsBody = document.getElementById("returnsBody");
-
-// Prevent duplicate listeners
-returnAdjustCharge.addEventListener("input", calcReturnTotals);
-returnAdjustDiscount.addEventListener("input", calcReturnTotals);
-
-returnType.addEventListener("change", renderReturnRefs);
-returnRefSelect.addEventListener("change", loadReturnItems);
-
-function renderReturnRefs() {
-  const type = returnType.value;
-  returnRefSelect.innerHTML = "";
-
-  if (type === "sale") {
-    db.sales.forEach(s => {
-      const cust = findById(db.customers, s.customerId) || {};
-      const opt = document.createElement("option");
-      opt.value = s.id;
-      opt.textContent = `S-${s.id} | ${cust.name || "-"} | ${fmt(s.total)}`;
-      returnRefSelect.appendChild(opt);
-    });
-  } else {
-    db.purchases.forEach(p => {
-      const sup = findById(db.suppliers, p.supplierId) || {};
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = `P-${p.id} | ${sup.name || "-"} | ${fmt(p.total)}`;
-      returnRefSelect.appendChild(opt);
-    });
-  }
-}
-
-function loadReturnItems() {
-  const type = returnType.value;
-  const refId = Number(returnRefSelect.value);
-  returnItemsBody.innerHTML = "";
-
-  if (!refId) return;
-
-  let source = type === "sale"
-    ? findById(db.sales, refId)
-    : findById(db.purchases, refId);
-
-  if (!source) return;
-
-  source.items.forEach((it, i) => {
-    const prod = findById(db.products, it.productId) || {};
-    const qty = it.qty;
-    const price = type === "sale" ? it.price : it.cost;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${prod.name || "-"}</td>
-      <td>${qty}</td>
-      <td><input type="number" class="return-qty" min="0" max="${qty}" value="0"></td>
-      <td>${fmt(price)}</td>
-      <td class="return-line">0.00</td>
-    `;
-    returnItemsBody.appendChild(tr);
-  });
-
-  returnItemsBody.querySelectorAll(".return-qty").forEach(input => {
-    input.addEventListener("input", calcReturnTotals);
-  });
-
-  calcReturnTotals();
-}
-
-function calcReturnTotals() {
-  let subtotal = 0;
-  const rate = getVatRate() / 100;
-
-  returnItemsBody.querySelectorAll("tr").forEach(tr => {
-    const qty = Number(tr.querySelector(".return-qty").value);
-    const price = Number(tr.children[3].textContent);
-    const line = qty * price;
-
-    tr.querySelector(".return-line").textContent = fmt(line);
-    subtotal += line;
-  });
-
-  const discount = Number(returnAdjustDiscount.value) || 0;
-  const charge = Number(returnAdjustCharge.value) || 0;
-
-  const base = Math.max(subtotal - discount, 0);
-  const vat = base * rate;
-  const total = base + charge + vat;
-
-  returnSubtotalEl.textContent = fmt(subtotal);
-  returnDiscountEl.textContent = fmt(discount);
-  returnChargeEl.textContent = fmt(charge);
-  returnVatEl.textContent = fmt(vat);
-  returnTotalEl.textContent = fmt(total);
-}
-
-document.getElementById("btnSaveReturn").addEventListener("click", () => {
-  const type = returnType.value;
-  const refId = Number(returnRefSelect.value);
-  if (!refId) return;
-
-  const reason = returnReason.value.trim() || "-";
-
-  let source = type === "sale"
-    ? findById(db.sales, refId)
-    : findById(db.purchases, refId);
-
-  if (!source) return;
-
-  const items = [];
-  let subtotal = 0;
-
-  returnItemsBody.querySelectorAll("tr").forEach((tr, i) => {
-    const qty = Number(tr.querySelector(".return-qty").value);
-    if (qty <= 0) return;
-
-    const price = Number(tr.children[3].textContent);
-    const line = qty * price;
-
-    items.push({
-      productId: source.items[i].productId,
-      qty,
-      price
-    });
-
-    subtotal += line;
-  });
-
-  if (!items.length) return;
-
-  const discount = Number(returnAdjustDiscount.value) || 0;
-  const charge = Number(returnAdjustCharge.value) || 0;
-
-  const rate = getVatRate() / 100;
-  const base = Math.max(subtotal - discount, 0);
-  const vat = base * rate;
-  const total = base + charge + vat;
-
-  const id = db.counters.return++;
-
-  db.returns.push({
-    id,
-    type,
-    refId,
-    items,
-    reason,
-    subtotal,
-    discount,
-    charge,
-    vat,
-    total,
-    date: nowDate()
-  });
-
-  // STOCK REVERSAL
-  items.forEach(it => {
-    const p = findById(db.products, it.productId);
-    if (!p) return;
-
-    if (type === "sale") p.stock += it.qty;
-    else p.stock -= it.qty;
-  });
-
-  saveDB();
-  renderReturns();
-  renderProducts();
-  renderDashboard();
-  renderTax();
-
-  returnItemsBody.innerHTML = "";
-  returnReason.value = "";
-  returnAdjustCharge.value = "0";
-  returnAdjustDiscount.value = "0";
-});
-
-function renderReturns() {
-  returnsBody.innerHTML = "";
-
-  db.returns.forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.id}</td>
-      <td>${r.type === "sale" ? "Sales Return" : "Purchase Return"}</td>
-      <td>${r.type === "sale" ? "S-" + r.refId : "P-" + r.refId}</td>
-      <td>${r.reason}</td>
-      <td>${fmt(r.subtotal)}</td>
-      <td>${fmt(r.vat)}</td>
-      <td>${fmt(r.total)}</td>
-      <td>${r.date}</td>
-    `;
-    returnsBody.appendChild(tr);
-  });
-}
 
 /* =========================
    DASHBOARD
@@ -2106,332 +1898,288 @@ function businessHeaderHtml(title, number, date) {
     </div>
   `;
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-Core ERP | Saudi Business Solutions</title>
+    <style>
+        :root {
+            --gold: #C9A86A; --gold-dark: #b08f55; --gold-light: #f4ebd6;
+            --bg: #ffffff; --bg-soft: #fafafa; --text-main: #222;
+            --text-soft: #666; --border: #e5e5e5; --danger: #c0392b;
+            --success: #27ae60; --radius: 12px; --shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-soft); color: var(--text-main); line-height: 1.6; }
+        .top-nav { position: fixed; top: 0; left: 0; right: 0; height: 70px; background: var(--bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .nav-tabs { display: flex; gap: 10px; margin-left: 30px; overflow-x: auto; }
+        .nav-btn { padding: 8px 16px; border: 1px solid var(--border); background: #fff; border-radius: 20px; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .nav-btn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+        .main-layout { display: flex; margin-top: 70px; min-height: calc(100vh - 70px); }
+        .side-panel { width: 280px; background: #fff; border-right: 1px solid var(--border); padding: 25px; position: sticky; top: 70px; height: calc(100vh - 70px); }
+        .content-area { flex: 1; padding: 30px; max-width: 1400px; margin: 0 auto; }
+        .page-section { display: none; animation: fadeIn 0.3s ease; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 25px; padding: 20px; }
+        .data-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .data-table th { background: var(--bg-soft); padding: 12px; text-align: left; border-bottom: 2px solid var(--border); }
+        .data-table td { padding: 12px; border-bottom: 1px solid var(--border); }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .btn.primary { background: var(--gold); color: #fff; }
+        .btn.btn-danger { background: var(--danger); color: #fff; }
+        .form-row { display: flex; gap: 20px; margin-bottom: 15px; }
+        .form-field { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        input, select, textarea { padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #fff; padding: 20px; border-radius: var(--radius); border-left: 5px solid var(--gold); box-shadow: var(--shadow); }
+        .stat-value { font-size: 24px; font-weight: bold; color: var(--gold-dark); }
+        @media print { .top-nav, .side-panel, .btn, .nav-tabs { display: none !important; } .main-layout { margin: 0; } .content-area { padding: 0; } .page-section { display: none !important; } #invoice { display: block !important; } }
+    </style>
+</head>
+<body>
 
-function renderSaleInvoice(id) {
-  const s = findById(db.sales, id);
-  if (!s) return;
-
-  const cust = findById(db.customers, s.customerId) || {};
-  const currency = db.settings.currency;
-
-  const itemsHtml = s.items.map((it, i) => {
-    const p = findById(db.products, it.productId) || {};
-    const line = it.qty * it.price;
-    return `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${p.name || "-"}</td>
-        <td>${it.qty}</td>
-        <td>${fmt(it.price)}</td>
-        <td>${fmt(line)}</td>
-      </tr>
-    `;
-  }).join("");
-
-  invoicePrintArea.innerHTML = `
-    ${businessHeaderHtml("Sales Invoice", "S-" + s.id, s.date)}
-    <div class="invoice-body">
-      <div class="invoice-row">
-        <div class="invoice-col">
-          <div class="invoice-label">Customer</div>
-          <div class="invoice-value">${cust.name || "-"}</div>
-          <div class="invoice-value">${cust.phone || ""}</div>
-        </div>
-      </div>
-
-      <table class="invoice-items-table">
-        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-
-      <div class="invoice-summary">
-        <div class="invoice-summary-row">
-          <span>Subtotal</span><span>${fmt(s.subtotal)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>Discount</span><span>${fmt(s.discount)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>Delivery</span><span>${fmt(s.delivery)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>VAT</span><span>${fmt(s.vat)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row total">
-          <span>Total</span><span>${fmt(s.total)} ${currency}</span>
-        </div>
-      </div>
+<header class="top-nav">
+    <strong>MS-CORE ERP</strong>
+    <nav class="nav-tabs">
+        <button class="nav-btn active" data-section="dashboard">🏠 Dashboard</button>
+        <button class="nav-btn" data-section="products">📦 Products</button>
+        <button class="nav-btn" data-section="sales">🛒 Sales</button>
+        <button class="nav-btn" data-section="purchases">🚛 Purchases</button>
+        <button class="nav-btn" data-section="returns">↩️ Returns</button>
+        <button class="nav-btn" data-section="tax">📊 Tax</button>
+        <button class="nav-btn" data-section="settings">⚙️ Settings</button>
+    </nav>
+    <div style="margin-left: auto;">
+        <span id="authStatus" style="font-size: 12px; margin-right: 10px;">Checking cloud...</span>
+        <button id="btnSignIn" class="btn primary">Cloud Login</button>
+        <button id="btnSignOut" class="btn" style="display:none">Logout</button>
     </div>
-    <div class="invoice-footer">
-      Thank you for your business.
+</header>
+
+<main class="main-layout">
+    <aside class="side-panel">
+        <div class="card">
+            <h3>Quick Stats</h3>
+            <p>Net VAT: <span id="statVatNet">0.00</span></p>
+            <p>Profit: <span id="statTotalProfit">0.00</span></p>
+        </div>
+        <button class="btn primary side-action-btn" data-section="sales" style="width:100%; margin-top:10px;">+ New Sale</button>
+        <button id="btnExportData" class="btn" style="width:100%; margin-top:10px;">Backup JSON</button>
+        <button id="btnResetData" class="btn btn-danger" style="width:100%; margin-top:10px;">System Reset</button>
+    </aside>
+
+    <div class="content-area">
+        <section id="dashboard" class="page-section active">
+            <h1>Business Overview</h1>
+            <div class="stat-grid">
+                <div class="stat-card">Products<div id="statTotalProducts" class="stat-value">0</div></div>
+                <div class="stat-card">Stock<div id="statTotalStock" class="stat-value">0</div></div>
+                <div class="stat-card">Total Sales<div id="statTotalSales" class="stat-value">0</div></div>
+                <div class="stat-card">Expenses<div id="statTotalExpenses" class="stat-value">0</div></div>
+            </div>
+        </section>
+
+        <section id="products" class="page-section">
+            <div class="card">
+                <h2>Add Product</h2>
+                <div class="form-row">
+                    <div class="form-field"><label>Name</label><input type="text" id="prodName"></div>
+                    <div class="form-field"><label>Category</label><select id="prodCategory"></select></div>
+                    <div class="form-field"><label>Alert Level</label><input type="number" id="prodLowAlert" value="5"></div>
+                    <button id="btnAddProduct" class="btn primary" style="align-self: flex-end;">Save</button>
+                </div>
+                <input type="text" id="productSearch" placeholder="Search products..." style="width:100%; margin-bottom:10px;">
+                <table class="data-table">
+                    <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Brand</th><th>Stock</th><th>Alert</th><th>Action</th></tr></thead>
+                    <tbody id="productsBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="sales" class="page-section">
+            <div class="card">
+                <h2>New Sales Invoice</h2>
+                <div class="form-row">
+                    <div class="form-field"><label>Customer</label><select id="saleCustomer"></select></div>
+                    <div class="form-field"><label>VAT Applicable</label><input type="checkbox" id="saleVat" checked></div>
+                </div>
+                <table class="data-table">
+                    <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Action</th></tr></thead>
+                    <tbody id="saleItemsBody"></tbody>
+                </table>
+                <button id="btnAddSaleItemRow" class="btn">+ Add Item</button>
+                <div class="form-row" style="margin-top:20px;">
+                    <div class="form-field"><label>Discount</label><input type="number" id="saleDiscount" value="0"></div>
+                    <div class="form-field"><label>Delivery</label><input type="number" id="saleDelivery" value="0"></div>
+                    <div class="form-field"><label>Paid Amount</label><input type="number" id="salePaid" value="0"></div>
+                    <button id="btnAddSale" class="btn primary" style="align-self: flex-end;">Finalize Sale</button>
+                </div>
+                <table class="data-table">
+                    <thead><tr><th>ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Paid</th><th>Date</th></tr></thead>
+                    <tbody id="salesBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="purchases" class="page-section">
+            <div class="card">
+                <h2>Purchase Order</h2>
+                <div class="form-row">
+                    <div class="form-field"><label>Supplier</label><select id="purchaseSupplier"></select></div>
+                    <div class="form-field"><label>VAT Included</label><input type="checkbox" id="purchaseVat" checked></div>
+                </div>
+                <table class="data-table">
+                    <thead><tr><th>Product</th><th>Qty</th><th>Cost</th><th>Ship</th><th>Action</th></tr></thead>
+                    <tbody id="purchaseItemsBody"></tbody>
+                </table>
+                <button id="btnAddPurchaseItemRow" class="btn">+ Add Item</button>
+                <button id="btnAddPurchase" class="btn primary">Save Purchase</button>
+                <table class="data-table">
+                    <tbody id="purchasesBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="tax" class="page-section">
+            <h2>VAT Summary</h2>
+            <div class="stat-grid">
+                <div class="stat-card">VAT Paid<div id="tax-vat-paid" class="stat-value">0</div></div>
+                <div class="stat-card">VAT Collected<div id="tax-vat-collected" class="stat-value">0</div></div>
+                <div class="stat-card">VAT Net Liability<div id="tax-vat-net" class="stat-value">0</div></div>
+            </div>
+        </section>
+
+        <section id="settings" class="page-section">
+            <div class="card">
+                <h2>System Settings</h2>
+                <div class="form-row">
+                    <div class="form-field"><label>VAT Rate (%)</label><input type="number" id="vat-rate" value="15"></div>
+                    <div class="form-field"><label>Currency</label><input type="text" id="currency-symbol" value="SAR"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field"><label>Business Name</label><input type="text" id="business-name"></div>
+                    <div class="form-field"><label>VAT Number</label><input type="text" id="business-vat-number"></div>
+                </div>
+                <button id="save-settings-btn" class="btn primary">Save Settings</button>
+            </div>
+        </section>
     </div>
-  `;
+</main>
+
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+/* CONFIG - ADD YOUR KEYS HERE */
+const CLIENT_ID = "1040901487454-i1lsnulecm9a41rndn306c41asaishh0.apps.googleusercontent.com";
+const API_KEY = "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";
+const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+const SCOPES = "https://www.googleapis.com/auth/drive.file";
+const DRIVE_FILE_NAME = "ms-core-erp-db.json";
+
+let gapiInited = false;
+let isSignedIn = false;
+let driveFileId = null;
+
+let db = {
+    products: [], categories: [], brands: [], customers: [], suppliers: [],
+    purchases: [], sales: [], returns: [], customerPayments: [], supplierPayments: [], expenses: [],
+    settings: { vatRate: 15, currency: "SAR", business: { name: "", vat: "", cr: "", phone: "", email: "", address: "" } },
+    counters: { purchase: 1, sale: 1, return: 1, expense: 1 }
+};
+
+/* CORE UTILS */
+const fmt = (n) => (Number(n) || 0).toFixed(2);
+const nowDate = () => new Date().toISOString().slice(0, 10);
+const getVatRate = () => Number(db.settings.vatRate) || 0;
+const findById = (arr, id) => arr.find(x => x.id === Number(id));
+
+/* GOOGLE DRIVE LOGIC */
+function gapiLoaded() { gapi.load("client:auth2", initClient); }
+async function initClient() {
+    await gapi.client.init({ apiKey: API_KEY, clientId: CLIENT_ID, discoveryDocs: DISCOVERY_DOCS, scope: SCOPES });
+    gapiInited = true;
+    gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+    updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+}
+function updateSigninStatus(signedIn) {
+    isSignedIn = signedIn;
+    document.getElementById("authStatus").innerText = signedIn ? "Cloud Connected" : "Local Mode";
+    document.getElementById("btnSignIn").style.display = signedIn ? "none" : "inline-block";
+    document.getElementById("btnSignOut").style.display = signedIn ? "inline-block" : "none";
+    if (signedIn) loadDBFromDrive();
+}
+function handleAuthClick() { gapi.auth2.getAuthInstance().signIn(); }
+function handleSignoutClick() { gapi.auth2.getAuthInstance().signOut(); }
+
+async function saveDBToDrive() {
+    if (!isSignedIn) { localStorage.setItem('erp_local_backup', JSON.stringify(db)); return; }
+    const fileId = await ensureDriveFile();
+    const content = JSON.stringify(db);
+    const boundary = "-------314159265358979323846";
+    const body = `--${boundary}\nContent-Type: application/json\n\n${JSON.stringify({name:DRIVE_FILE_NAME})}\n--${boundary}\nContent-Type: application/json\n\n${content}\n--${boundary}--`;
+    await gapi.client.request({ path: `/upload/drive/v3/files/${fileId}`, method: "PATCH", params: { uploadType: "multipart" }, headers: { "Content-Type": `multipart/related; boundary=${boundary}` }, body });
 }
 
-function renderPurchaseInvoice(id) {
-  const p = findById(db.purchases, id);
-  if (!p) return;
-
-  const sup = findById(db.suppliers, p.supplierId) || {};
-  const currency = db.settings.currency;
-
-  const itemsHtml = p.items.map((it, i) => {
-    const prod = findById(db.products, it.productId) || {};
-    const line = it.qty * it.cost;
-    return `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${prod.name || "-"}</td>
-        <td>${it.qty}</td>
-        <td>${fmt(it.cost)}</td>
-        <td>${fmt(line)}</td>
-      </tr>
-    `;
-  }).join("");
-
-  invoicePrintArea.innerHTML = `
-    ${businessHeaderHtml("Purchase Invoice", "P-" + p.id, p.date)}
-    <div class="invoice-body">
-      <div class="invoice-row">
-        <div class="invoice-col">
-          <div class="invoice-label">Supplier</div>
-          <div class="invoice-value">${sup.name || "-"}</div>
-        </div>
-      </div>
-
-      <table class="invoice-items-table">
-        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Cost</th><th>Total</th></tr></thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-
-      <div class="invoice-summary">
-        <div class="invoice-summary-row">
-          <span>Subtotal</span><span>${fmt(p.subtotal)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>Shipping</span><span>${fmt(p.shipping)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>Discount</span><span>${fmt(p.discount)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>VAT</span><span>${fmt(p.vat)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row total">
-          <span>Total</span><span>${fmt(p.total)} ${currency}</span>
-        </div>
-      </div>
-    </div>
-    <div class="invoice-footer">
-      Purchase record.
-    </div>
-  `;
+async function ensureDriveFile() {
+    if (driveFileId) return driveFileId;
+    const res = await gapi.client.drive.files.list({ q: `name = '${DRIVE_FILE_NAME}' and trashed = false` });
+    if (res.result.files.length > 0) return driveFileId = res.result.files[0].id;
+    const create = await gapi.client.drive.files.create({ resource: { name: DRIVE_FILE_NAME, mimeType: "application/json" }, fields: "id" });
+    return driveFileId = create.result.id;
 }
 
-function renderExpenseInvoice(id) {
-  const e = findById(db.expenses, id);
-  if (!e) return;
-
-  const currency = db.settings.currency;
-
-  invoicePrintArea.innerHTML = `
-    ${businessHeaderHtml("Expense Invoice", "E-" + e.id, e.date)}
-    <div class="invoice-body">
-      <div class="invoice-row">
-        <div class="invoice-col">
-          <div class="invoice-label">Description</div>
-          <div class="invoice-value">${e.desc}</div>
-        </div>
-      </div>
-
-      <table class="invoice-items-table">
-        <thead><tr><th>#</th><th>Item</th><th>Amount</th></tr></thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td>${e.desc}</td>
-            <td>${fmt(e.amount)} ${currency}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="invoice-summary">
-        <div class="invoice-summary-row total">
-          <span>Total</span><span>${fmt(e.amount)} ${currency}</span>
-        </div>
-      </div>
-    </div>
-    <div class="invoice-footer">
-      Expense record.
-    </div>
-  `;
+async function loadDBFromDrive() {
+    const fileId = await ensureDriveFile();
+    const res = await gapi.client.drive.files.get({ fileId, alt: "media" });
+    if (res.result) { db = res.result; initAppUI(); }
 }
 
-function renderReturnInvoice(id) {
-  const r = findById(db.returns, id);
-  if (!r) return;
+function saveDB() { saveDBToDrive(); }
 
-  const currency = db.settings.currency;
-  let headerTitle = r.type === "sale" ? "Sales Return Invoice" : "Purchase Return Invoice";
-  let numberPrefix = r.type === "sale" ? "RS-" : "RP-";
-
-  let partyName = "-";
-  if (r.type === "sale") {
-    const sale = findById(db.sales, r.refId);
-    if (sale) {
-      const cust = findById(db.customers, sale.customerId) || {};
-      partyName = cust.name || "-";
-    }
-  } else {
-    const pur = findById(db.purchases, r.refId);
-    if (pur) {
-      const sup = findById(db.suppliers, pur.supplierId) || {};
-      partyName = sup.name || "-";
-    }
-  }
-
-  const itemsHtml = r.items.map((it, i) => {
-    const p = findById(db.products, it.productId) || {};
-    const line = it.qty * it.price;
-    return `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${p.name || "-"}</td>
-        <td>${it.qty}</td>
-        <td>${fmt(it.price)}</td>
-        <td>${fmt(line)}</td>
-      </tr>
-    `;
-  }).join("");
-
-  invoicePrintArea.innerHTML = `
-    ${businessHeaderHtml(headerTitle, numberPrefix + r.id, r.date)}
-    <div class="invoice-body">
-      <div class="invoice-row">
-        <div class="invoice-col">
-          <div class="invoice-label">${r.type === "sale" ? "Customer" : "Supplier"}</div>
-          <div class="invoice-value">${partyName}</div>
-          <div class="invoice-label" style="margin-top:8px;">Reason</div>
-          <div class="invoice-value">${r.reason}</div>
-        </div>
-      </div>
-
-      <table class="invoice-items-table">
-        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-
-      <div class="invoice-summary">
-        <div class="invoice-summary-row">
-          <span>Subtotal</span><span>${fmt(r.subtotal)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>Discount</span><span>${fmt(r.discount)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>Delivery / Shipping</span><span>${fmt(r.charge)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row">
-          <span>VAT</span><span>${fmt(r.vat)} ${currency}</span>
-        </div>
-        <div class="invoice-summary-row total">
-          <span>Total</span><span>${fmt(r.total)} ${currency}</span>
-        </div>
-      </div>
-    </div>
-    <div class="invoice-footer">
-      Return record.
-    </div>
-  `;
-}
-
-/* =========================
-   EXPORT & RESET
-   ========================= */
-document.getElementById("btnExportData").addEventListener("click", () => {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
-  const a = document.createElement("a");
-  a.setAttribute("href", dataStr);
-  a.setAttribute("download", "ms-core-data.json");
-  a.click();
+/* NAVIGATION LOGIC */
+document.querySelectorAll(".nav-btn, .side-action-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const sec = btn.dataset.section;
+        document.querySelectorAll(".page-section").forEach(s => s.classList.toggle("active", s.id === sec));
+        document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.section === sec));
+        if (sec === "dashboard") renderDashboard();
+        if (sec === "products") renderProducts();
+        if (sec === "sales") renderSales();
+        if (sec === "tax") renderTax();
+    });
 });
 
-document.getElementById("btnResetData").addEventListener("click", () => {
-  const code = prompt("Enter secret reset code:");
-  if (code !== "MS-CORE-RESET-2025") return;
-
-  if (!confirm("Are you sure you want to reset ALL data?")) return;
-
-  db = {
-    products: [],
-    categories: [],
-    brands: [],
-    customers: [],
-    suppliers: [],
-    purchases: [],
-    sales: [],
-    returns: [],
-    customerPayments: [],
-    supplierPayments: [],
-    expenses: [],
-    settings: {
-      vatRate: 15,
-      currency: "SAR",
-      business: {
-        name: "",
-        cr: "",
-        vat: "",
-        phone: "",
-        email: "",
-        address: ""
-      }
-    },
-    counters: {
-      purchase: 1,
-      sale: 1,
-      return: 1,
-      expense: 1
-    }
-  };
-  saveDB();
-  initAppUI();
+/* APP LOGIC - PRODUCTS */
+document.getElementById("btnAddProduct").addEventListener("click", () => {
+    const name = document.getElementById("prodName").value;
+    if (!name) return;
+    db.products.push({ id: Date.now(), name, stock: 0, lowAlert: 5 });
+    saveDB(); renderProducts();
 });
 
-/* =========================
-   INIT
-   ========================= */
-function initAppUI() {
-  renderCategoriesBrands();
-  renderProducts();
-  renderCustomers();
-  renderSuppliers();
-  renderPurchases();
-  renderSales();
-  renderPayments();
-  renderExpenses();
-  renderReturns();
-  renderDashboard();
-  renderTax();
-  loadSettingsForm();
-  renderReturnRefs();
-  renderInvoiceRefs();
+function renderProducts() {
+    const body = document.getElementById("productsBody");
+    body.innerHTML = db.products.map((p, i) => `<tr><td>${i+1}</td><td>${p.name}</td><td>-</td><td>-</td><td>${p.stock}</td><td>${p.lowAlert}</td><td><button onclick="deleteProduct(${p.id})">X</button></td></tr>`).join("");
 }
 
-// Quick actions on side panel
-document.querySelectorAll(".side-action-btn[data-section]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const sec = btn.dataset.section;
-    const navBtn = document.querySelector(\`.nav-btn[data-section="\${sec}"]\`);
-    if (navBtn) navBtn.click();
-  });
-});
+function renderDashboard() {
+    document.getElementById("statTotalProducts").innerText = db.products.length;
+    document.getElementById("statTotalSales").innerText = db.sales.length;
+    const vatPaid = db.purchases.reduce((a, p) => a + p.vat, 0);
+    const vatCol = db.sales.reduce((a, s) => a + s.vat, 0);
+    document.getElementById("statVatNet").innerText = fmt(vatCol - vatPaid);
+}
 
-// Auth buttons
-document.getElementById("btnSignIn").addEventListener("click", handleAuthClick);
-document.getElementById("btnSignOut").addEventListener("click", handleSignoutClick);
+function initAppUI() { renderDashboard(); renderProducts(); }
 
-// Load gapi
-gapiLoaded();
+/* INITIALIZE */
+window.onload = () => {
+    gapiLoaded();
+    document.getElementById("btnSignIn").onclick = handleAuthClick;
+    document.getElementById("btnSignOut").onclick = handleSignoutClick;
+};
 </script>
 </body>
 </html>
