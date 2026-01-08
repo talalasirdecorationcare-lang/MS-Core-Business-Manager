@@ -1,0 +1,2238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MS‑Core Business Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --gold: #C9A86A;
+      --gold-dark: #b08f55;
+      --gold-light: #f4ebd6;
+      --bg: #ffffff;
+      --bg-soft: #fafafa;
+      --text-main: #222;
+      --text-soft: #666;
+      --border: #e5e5e5;
+      --danger: #c0392b;
+      --success: #27ae60;
+      --radius: 12px;
+      --shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:var(--bg-soft);color:var(--text-main);line-height:1.5;
+    }
+    .top-nav{
+      position:fixed;top:0;left:0;right:0;background:var(--bg);
+      border-bottom:1px solid var(--border);padding:10px 20px;
+      display:flex;align-items:center;gap:30px;z-index:1000;box-shadow:var(--shadow);
+    }
+    .brand-area{display:flex;align-items:center;gap:12px}
+    .brand-logo{width:60px;height:60px;object-fit:contain}
+    .brand-name{font-size:18px;font-weight:600}
+    .brand-subtitle{font-size:12px;color:var(--text-soft)}
+    .nav-tabs{display:flex;gap:8px;overflow-x:auto}
+    .nav-btn{
+      background:transparent;border:1px solid var(--border);
+      padding:8px 14px;border-radius:999px;cursor:pointer;
+      font-size:13px;color:var(--text-soft);transition:.2s;white-space:nowrap;
+    }
+    .nav-btn:hover{border-color:var(--gold);color:var(--gold)}
+    .nav-btn.active{background:var(--gold);color:#fff;border-color:var(--gold-dark)}
+    .main-layout{display:flex;margin-top:90px;padding:20px;gap:20px}
+    .side-panel{
+      width:260px;background:var(--bg);border-radius:var(--radius);
+      padding:20px;box-shadow:var(--shadow);height:fit-content;
+      position:sticky;top:100px;
+    }
+    .side-section{margin-bottom:30px}
+    .side-section h3{font-size:14px;margin-bottom:10px;color:var(--gold-dark)}
+    .side-action-btn{
+      width:100%;padding:10px;border-radius:var(--radius);
+      border:1px solid var(--gold);background:#fff;color:var(--gold-dark);
+      cursor:pointer;margin-bottom:10px;transition:.2s;font-size:13px;
+    }
+    .side-action-btn:hover{background:var(--gold);color:#fff}
+    .side-action-btn.danger{border-color:var(--danger);color:var(--danger)}
+    .side-action-btn.danger:hover{background:var(--danger);color:#fff}
+    .content-area{flex:1;min-width:0}
+    .page-section{display:none}
+    .page-section.active{display:block}
+    .section-header{margin-bottom:20px}
+    .section-header h1{font-size:26px;font-weight:600;color:var(--gold-dark)}
+    .section-header p{color:var(--text-soft);margin-top:4px;font-size:14px}
+    .card{
+      background:var(--bg);border-radius:var(--radius);
+      box-shadow:var(--shadow);margin-bottom:25px;overflow:hidden;
+    }
+    .card-header{
+      padding:16px 20px;border-bottom:1px solid var(--border);
+      display:flex;justify-content:space-between;align-items:center;gap:10px;
+    }
+    .card-header h2{font-size:18px;color:var(--gold-dark)}
+    .card-header p{font-size:13px;color:var(--text-soft);margin-top:4px}
+    .card-body{padding:18px 20px 20px}
+    .card-grid{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:15px;margin-bottom:25px;
+    }
+    .stat-card{
+      background:var(--bg);border-radius:var(--radius);
+      padding:16px;box-shadow:var(--shadow);
+    }
+    .stat-label{font-size:12px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.06em}
+    .stat-value{font-size:22px;font-weight:600;margin-top:6px}
+    .stat-value.danger{color:var(--danger)}
+    .form-row{display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap}
+    .form-field{flex:1;min-width:180px}
+    .form-field label{display:block;font-size:13px;margin-bottom:6px;color:var(--text-main)}
+    input,select,textarea{
+      width:100%;padding:9px 10px;border-radius:var(--radius);
+      border:1px solid var(--border);background:#fff;font-size:13px;transition:.2s;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,106,.25);outline:none;
+    }
+    .checkbox-row{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--text-soft)}
+    .form-actions{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+    .btn{
+      padding:9px 16px;border-radius:var(--radius);border:none;
+      cursor:pointer;font-size:13px;transition:.2s;display:inline-flex;align-items:center;gap:6px;
+    }
+    .btn.primary{background:var(--gold);color:#fff}
+    .btn.primary:hover{background:var(--gold-dark)}
+    .btn.ghost{background:transparent;border:1px solid var(--gold);color:var(--gold-dark)}
+    .btn.ghost:hover{background:var(--gold);color:#fff}
+    .btn.small{padding:6px 10px;font-size:12px}
+    .btn-danger{background:var(--danger);color:#fff}
+    .btn-danger:hover{background:#a93226}
+    .data-table{width:100%;border-collapse:collapse;font-size:13px}
+    .data-table th{
+      background:var(--gold-light);color:var(--gold-dark);
+      padding:8px 10px;text-align:left;font-weight:500;border-bottom:1px solid var(--border);
+    }
+    .data-table td{padding:8px 10px;border-bottom:1px solid var(--border)}
+    .data-table tr:hover td{background:#fdf8ef}
+    .search-input{
+      padding:8px 12px;border-radius:999px;border:1px solid var(--border);
+      font-size:13px;min-width:200px;
+    }
+    .search-input:focus{border-color:var(--gold);outline:none}
+    .two-column{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;
+    }
+    .tax-summary-grid{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:15px;margin-bottom:16px;
+    }
+    .tax-card{
+      background:var(--bg);border-radius:var(--radius);
+      padding:14px;box-shadow:var(--shadow);
+    }
+    .tax-label{font-size:12px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.06em}
+    .tax-value{display:block;margin-top:4px;font-size:16px;font-weight:600}
+    .invoice-shell{background:#f3f4f6;border-radius:var(--radius);padding:18px}
+    .invoice-wrapper{
+      background:#fff;border-radius:var(--radius);
+      overflow:hidden;box-shadow:var(--shadow);
+    }
+    .invoice-header{
+      background:#111827;color:#f9fafb;padding:16px 20px;
+      display:flex;justify-content:space-between;gap:16px;align-items:center;
+    }
+    .invoice-header-left{display:flex;gap:12px;align-items:center}
+    .invoice-logo{width:60px;height:60px;object-fit:contain;background:#111827;border-radius:8px}
+    .invoice-business-block{font-size:13px}
+    .invoice-business-name{font-size:16px;font-weight:600;margin-bottom:2px}
+    .invoice-business-line{color:#9ca3af;font-size:12px}
+    .invoice-header-right{text-align:right;font-size:13px}
+    .invoice-header-right-title{font-size:16px;font-weight:600;margin-bottom:4px}
+    .invoice-header-right-line{color:#9ca3af;font-size:12px}
+    .invoice-body{padding:16px 20px 20px;font-size:13px}
+    .invoice-row{display:flex;justify-content:space-between;gap:20px;margin-bottom:12px;flex-wrap:wrap}
+    .invoice-col{min-width:200px}
+    .invoice-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:4px}
+    .invoice-value{font-size:13px}
+    .invoice-items-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+    .invoice-items-table th,.invoice-items-table td{
+      border:1px solid #e5e7eb;padding:6px 8px;text-align:left;
+    }
+    .invoice-summary{margin-top:14px;max-width:260px;margin-left:auto;font-size:13px}
+    .invoice-summary-row{display:flex;justify-content:space-between;margin-bottom:4px}
+    .invoice-summary-row.total{
+      border-top:1px solid #e5e7eb;padding-top:4px;margin-top:4px;font-weight:600;
+    }
+    .invoice-footer{padding:10px 20px 14px;font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb}
+    @media(max-width:900px){
+      .main-layout{flex-direction:column}
+      .side-panel{width:100%;position:static}
+      .form-row{flex-direction:column}
+    }
+    @media print{
+      body *{visibility:hidden}
+      #invoicePrintArea,#invoicePrintArea *{visibility:visible}
+      #invoicePrintArea{position:absolute;left:0;top:0;width:100%}
+    }
+  </style>
+</head>
+<body>
+<header class="top-nav">
+  <div class="brand-area">
+    <img src="logo.png" class="brand-logo" alt="Logo">
+    <div class="brand-text">
+      <div class="brand-name">MS‑Core</div>
+      <div class="brand-subtitle">Business Manager</div>
+    </div>
+  </div>
+  <nav class="nav-tabs">
+    <button class="nav-btn active" data-section="dashboard">🏠 Dashboard</button>
+    <button class="nav-btn" data-section="products">📦 Products</button>
+    <button class="nav-btn" data-section="categories">🗂️ Categories & Brands</button>
+    <button class="nav-btn" data-section="customers">👤 Customers</button>
+    <button class="nav-btn" data-section="suppliers">🏭 Suppliers</button>
+    <button class="nav-btn" data-section="purchases">🧾 Purchases</button>
+    <button class="nav-btn" data-section="sales">🛒 Sales</button>
+    <button class="nav-btn" data-section="payments">💰 Payments</button>
+    <button class="nav-btn" data-section="returns">↩️ Returns</button>
+    <button class="nav-btn" data-section="expenses">💸 Expenses</button>
+    <button class="nav-btn" data-section="tax">📊 Tax</button>
+    <button class="nav-btn" data-section="settings">⚙️ Settings</button>
+    <button class="nav-btn" data-section="invoice">🧾 Invoice</button>
+  </nav>
+</header>
+
+<main class="main-layout">
+  <aside class="side-panel">
+    <div class="side-section">
+      <h3>Quick Actions</h3>
+      <button class="side-action-btn" data-section="sales">+ New Sale</button>
+      <button class="side-action-btn" data-section="purchases">+ New Purchase</button>
+      <button class="side-action-btn" data-section="products">+ New Product</button>
+    </div>
+    <div class="side-section">
+      <h3>Data Tools</h3>
+      <button id="btnExportData" class="side-action-btn">Export Data (JSON)</button>
+      <button id="btnResetData" class="side-action-btn danger">Reset All Data</button>
+    </div>
+  </aside>
+
+  <section class="content-area">
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="page-section active">
+      <header class="section-header">
+        <h1>Dashboard</h1>
+        <p>Overview of your business performance.</p>
+      </header>
+      <div class="card-grid">
+        <div class="stat-card"><div class="stat-label">Total Products</div><div id="statTotalProducts" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Stock</div><div id="statTotalStock" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Purchases</div><div id="statTotalPurchases" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Sales</div><div id="statTotalSales" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Expenses</div><div id="statTotalExpenses" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">Profit</div><div id="statTotalProfit" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">VAT Paid</div><div id="statVatPaid" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">VAT Collected</div><div id="statVatCollected" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">Net VAT</div><div id="statVatNet" class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">Customer Debt</div><div id="statCustomerDebt" class="stat-value danger">0</div></div>
+        <div class="stat-card"><div class="stat-label">Supplier Debt</div><div id="statSupplierDebt" class="stat-value danger">0</div></div>
+      </div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section id="products" class="page-section">
+      <header class="section-header">
+        <h1>Products</h1>
+        <p>Manage your products and stock.</p>
+      </header>
+      <div class="card">
+        <div class="card-header"><h2>Add Product</h2></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-field"><label>Name</label><input id="prodName" type="text"></div>
+            <div class="form-field"><label>Category</label><select id="prodCategory"></select></div>
+            <div class="form-field"><label>Brand</label><select id="prodBrand"></select></div>
+            <div class="form-field"><label>Low Stock Alert</label><input id="prodLowAlert" type="number" value="0"></div>
+          </div>
+          <div class="form-actions"><button id="btnAddProduct" class="btn primary">Add Product</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><h2>Product List</h2><p>Search and manage products.</p></div>
+          <input id="productSearch" class="search-input" placeholder="Search products...">
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Brand</th><th>Stock</th><th>Low Alert</th><th>Action</th></tr></thead>
+            <tbody id="productsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATEGORIES & BRANDS -->
+    <section id="categories" class="page-section">
+      <header class="section-header"><h1>Categories & Brands</h1><p>Organize your products.</p></header>
+      <div class="two-column">
+        <div class="card">
+          <div class="card-header"><h2>Categories</h2></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field"><label>New Category</label><input id="catName" type="text"></div>
+              <div class="form-field"><label>&nbsp;</label><button id="btnAddCategory" class="btn primary">Add</button></div>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Name</th><th>Action</th></tr></thead>
+              <tbody id="categoriesBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Brands</h2></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field"><label>New Brand</label><input id="brandName" type="text"></div>
+              <div class="form-field"><label>&nbsp;</label><button id="btnAddBrand" class="btn primary">Add</button></div>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Name</th><th>Action</th></tr></thead>
+              <tbody id="brandsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section id="customers" class="page-section">
+      <header class="section-header"><h1>Customers</h1><p>Manage customers and balances.</p></header>
+      <div class="card">
+        <div class="card-header"><h2>Add Customer</h2></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-field"><label>Name</label><input id="custName" type="text"></div>
+            <div class="form-field"><label>Phone</label><input id="custPhone" type="text"></div>
+          </div>
+          <div class="form-actions"><button id="btnAddCustomer" class="btn primary">Add Customer</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><h2>Customers & Balances</h2><p>Track sales and payments.</p></div>
+          <input id="customerSearch" class="search-input" placeholder="Search customers...">
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Total Sales</th><th>Total Paid</th><th>Balance</th><th>Action</th></tr></thead>
+            <tbody id="customersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUPPLIERS -->
+    <section id="suppliers" class="page-section">
+      <header class="section-header"><h1>Suppliers</h1><p>Manage suppliers and balances.</p></header>
+      <div class="card">
+        <div class="card-header"><h2>Add Supplier</h2></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-field"><label>Name</label><input id="supName" type="text"></div>
+          </div>
+          <div class="form-actions"><button id="btnAddSupplier" class="btn primary">Add Supplier</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><h2>Suppliers & Balances</h2><p>Track purchases and payments.</p></div>
+          <input id="supplierSearch" class="search-input" placeholder="Search suppliers...">
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Name</th><th>Total Purchases</th><th>Total Paid</th><th>Balance</th><th>Action</th></tr></thead>
+            <tbody id="suppliersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PURCHASES -->
+    <section id="purchases" class="page-section">
+      <header class="section-header"><h1>Purchases</h1><p>Record purchases and update stock.</p></header>
+      <div class="card">
+        <div class="card-header"><h2>Add Purchase</h2></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-field"><label>Supplier</label><select id="purchaseSupplier"></select></div>
+            <div class="form-field"><label>Apply VAT?</label><div class="checkbox-row"><input id="purchaseVat" type="checkbox" checked><span>Include VAT</span></div></div>
+            <div class="form-field"><label>Paid Now</label><input id="purchasePaid" type="number" value="0" min="0" step="0.01"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field"><label>Discount Type</label><select id="purchaseDiscountType"><option value="before">Before Tax</option><option value="after">After Tax</option></select></div>
+            <div class="form-field"><label>Discount Amount</label><input id="purchaseDiscount" type="number" value="0" min="0" step="0.01"></div>
+          </div>
+          <div class="card-header" style="border:none;padding:0;margin:10px 0 5px 0;">
+            <h2 style="font-size:14px;color:#444;">Items</h2>
+            <button id="btnAddPurchaseItemRow" class="btn ghost small">+ Add Item</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Product</th><th>Qty</th><th>Cost</th><th>Shipping</th><th></th></tr></thead>
+            <tbody id="purchaseItemsBody"></tbody>
+          </table>
+          <div class="form-actions"><button id="btnAddPurchase" class="btn primary">Save Purchase</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Purchase History</h2></div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Supplier</th><th>Items</th><th>Subtotal</th><th>Shipping</th><th>VAT</th><th>Total</th><th>Paid</th><th>Balance</th><th>Date</th></tr></thead>
+            <tbody id="purchasesBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SALES -->
+    <section id="sales" class="page-section">
+      <header class="section-header"><h1>Sales</h1><p>Record sales and reduce stock.</p></header>
+      <div class="card">
+        <div class="card-header"><h2>Add Sale</h2></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-field"><label>Customer</label><select id="saleCustomer"></select></div>
+            <div class="form-field"><label>Apply VAT?</label><div class="checkbox-row"><input id="saleVat" type="checkbox" checked><span>Include VAT</span></div></div>
+            <div class="form-field"><label>Paid Now</label><input id="salePaid" type="number" value="0" min="0" step="0.01"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field"><label>Discount (no VAT)</label><input id="saleDiscount" type="number" value="0" min="0" step="0.01"></div>
+            <div class="form-field"><label>Delivery (no VAT)</label><input id="saleDelivery" type="number" value="0" min="0" step="0.01"></div>
+          </div>
+          <div class="card-header" style="border:none;padding:0;margin:10px 0 5px 0;">
+            <h2 style="font-size:14px;color:#444;">Items</h2>
+            <button id="btnAddSaleItemRow" class="btn ghost small">+ Add Item</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th></th></tr></thead>
+            <tbody id="saleItemsBody"></tbody>
+          </table>
+          <div class="form-actions"><button id="btnAddSale" class="btn primary">Save Sale</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Sales History</h2></div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Customer</th><th>Items</th><th>Subtotal</th><th>Discount</th><th>Delivery</th><th>VAT</th><th>Total</th><th>Paid</th><th>Balance</th><th>Date</th></tr></thead>
+            <tbody id="salesBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAYMENTS -->
+    <section id="payments" class="page-section">
+      <header class="section-header"><h1>Payments</h1><p>Track customer and supplier payments.</p></header>
+      <div class="two-column">
+        <div class="card">
+          <div class="card-header"><h2>Customer Payment</h2></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field"><label>Customer</label><select id="payCustomer"></select></div>
+              <div class="form-field"><label>Amount</label><input id="payCustomerAmount" type="number" min="0" step="0.01"></div>
+            </div>
+            <div class="form-actions"><button id="btnAddCustomerPayment" class="btn primary">Add Payment</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Supplier Payment</h2></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field"><label>Supplier</label><select id="paySupplier"></select></div>
+              <div class="form-field"><label>Amount</label><input id="paySupplierAmount" type="number" min="0" step="0.01"></div>
+            </div>
+            <div class="form-actions"><button id="btnAddSupplierPayment" class="btn primary">Add Payment</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="two-column">
+        <div class="card">
+          <div class="card-header"><h2>Customer Payments</h2></div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Customer</th><th>Amount</th><th>Date</th></tr></thead>
+              <tbody id="customerPaymentsBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Supplier Payments</h2></div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Supplier</th><th>Amount</th><th>Date</th></tr></thead>
+              <tbody id="supplierPaymentsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADVANCED RETURNS -->
+    <section id="returns" class="page-section">
+      <header class="section-header">
+        <h1>Returns</h1>
+        <p>Handle sales and purchase returns with stock and VAT adjustments.</p>
+      </header>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>New Return</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-field">
+              <label>Return Type</label>
+              <select id="returnType">
+                <option value="sale">Sales Return</option>
+                <option value="purchase">Purchase Return</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Original Reference</label>
+              <select id="returnRefSelect"></select>
+            </div>
+            <div class="form-field">
+              <label>Return Reason</label>
+              <input id="returnReason" type="text" placeholder="Damaged, wrong item, etc.">
+            </div>
+          </div>
+
+          <div class="card-header" style="border:none;padding:0;margin:10px 0 5px 0;">
+            <h2 style="font-size:14px;color:#444;">Return Items</h2>
+            <small style="font-size:12px;color:#777;">Select quantities to return (partial or full).</small>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Original Qty</th>
+                <th>Return Qty</th>
+                <th>Price/Cost</th>
+                <th>Line Total</th>
+              </tr>
+            </thead>
+            <tbody id="returnItemsBody"></tbody>
+          </table>
+
+          <div class="two-column" style="margin-top:15px;">
+            <div>
+              <div class="form-row">
+                <div class="form-field">
+                  <label>Adjust Delivery / Shipping</label>
+                  <input id="returnAdjustCharge" type="number" value="0" min="0" step="0.01">
+                </div>
+                <div class="form-field">
+                  <label>Adjust Discount</label>
+                  <input id="returnAdjustDiscount" type="number" value="0" min="0" step="0.01">
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="card" style="box-shadow:none;border:1px solid var(--border);">
+                <div class="card-body">
+                  <div class="invoice-summary-row"><span>Return Subtotal</span><span id="returnSubtotal">0.00</span></div>
+                  <div class="invoice-summary-row"><span>Return Discount</span><span id="returnDiscount">0.00</span></div>
+                  <div class="invoice-summary-row"><span>Return Delivery/Shipping</span><span id="returnCharge">0.00</span></div>
+                  <div class="invoice-summary-row"><span>Return VAT</span><span id="returnVat">0.00</span></div>
+                  <div class="invoice-summary-row total"><span>Return Total</span><span id="returnTotal">0.00</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button id="btnSaveReturn" class="btn primary">Save Return</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Return History</h2>
+          <p>All sales and purchase returns with impact on stock and VAT.</p>
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Original Ref</th>
+                <th>Reason</th>
+                <th>Subtotal</th>
+                <th>VAT</th>
+                <th>Total</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="returnsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section id="expenses" class="page-section">
+      <header class="section-header"><h1>Expenses</h1><p>Track business expenses.</p></header>
+      <div class="card">
+        <div class="card-header"><h2>Add Expense</h2></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-field"><label>Description</label><input id="expDesc" type="text"></div>
+            <div class="form-field"><label>Amount</label><input id="expAmount" type="number" min="0" step="0.01"></div>
+          </div>
+          <div class="form-actions"><button id="btnAddExpense" class="btn primary">Add Expense</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Expense History</h2></div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Description</th><th>Amount</th><th>Date</th></tr></thead>
+            <tbody id="expensesBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAX -->
+    <section id="tax" class="page-section">
+      <header class="section-header"><h1>Tax Summary</h1><p>View VAT paid, collected, net VAT, and returns impact.</p></header>
+      <div class="tax-summary-grid">
+        <div class="tax-card"><span class="tax-label">VAT Rate</span><span id="tax-vat-rate" class="tax-value">0%</span></div>
+        <div class="tax-card"><span class="tax-label">VAT Paid (Purchases)</span><span id="tax-vat-paid" class="tax-value">0</span></div>
+        <div class="tax-card"><span class="tax-label">VAT Collected (Sales)</span><span id="tax-vat-collected" class="tax-value">0</span></div>
+        <div class="tax-card"><span class="tax-label">VAT Adjusted (Returns)</span><span id="tax-vat-returns" class="tax-value">0</span></div>
+        <div class="tax-card"><span class="tax-label">Net VAT</span><span id="tax-vat-net" class="tax-value">0</span></div>
+      </div>
+      <div class="two-column">
+        <div class="card">
+          <div class="card-header"><h2>VAT – Purchases</h2></div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Supplier</th><th>Subtotal</th><th>Shipping</th><th>VAT</th><th>Total</th><th>Date</th></tr></thead>
+              <tbody id="tax-purchases-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>VAT – Sales</h2></div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Customer</th><th>Subtotal</th><th>Discount</th><th>Delivery</th><th>VAT</th><th>Total</th><th>Date</th></tr></thead>
+              <tbody id="tax-sales-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="settings" class="page-section">
+      <header class="section-header"><h1>Settings</h1><p>Configure VAT, currency, and business info.</p></header>
+      <div class="two-column">
+        <div class="card">
+          <div class="card-header"><h2>Tax & Currency</h2></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field"><label>VAT Rate (%)</label><input id="vat-rate" type="number" value="15" min="0" step="0.01"></div>
+              <div class="form-field"><label>Currency Symbol</label><input id="currency-symbol" type="text" value="SAR"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Business Info</h2></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field"><label>Business Name</label><input id="business-name" type="text"></div>
+              <div class="form-field"><label>CR Number</label><input id="cr-number" type="text"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-field"><label>VAT Number</label><input id="business-vat-number" type="text"></div>
+              <div class="form-field"><label>Phone</label><input id="business-phone" type="text"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-field"><label>Email</label><input id="business-email" type="email"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-field"><label>Address</label><textarea id="business-address" rows="3"></textarea></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions"><button id="save-settings-btn" class="btn primary">Save Settings</button></div>
+    </section>
+
+    <!-- INVOICE -->
+    <section id="invoice" class="page-section">
+      <header class="section-header"><h1>Invoice</h1><p>Generate printable invoices.</p></header>
+      <div class="card">
+        <div class="card-header">
+          <h2>Invoice Generator</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-field">
+              <label>Invoice Type</label>
+              <select id="invoiceTypeSelect">
+                <option value="sale">Sales Invoice</option>
+                <option value="purchase">Purchase Invoice</option>
+                <option value="expense">Expense Invoice</option>
+                <option value="return">Return Invoice</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Reference</label>
+              <select id="invoiceRefSelect"></select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="btnGenerateInvoice" class="btn primary">Generate Invoice</button>
+            <button id="btnPrintInvoice" class="btn ghost">Print</button>
+          </div>
+        </div>
+      </div>
+      <div class="invoice-shell">
+        <div id="invoicePrintArea" class="invoice-wrapper"></div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+/* =========================
+   DATABASE
+   ========================= */
+const DB_KEY = "ms_core_erp_db_v3";
+
+let db = {
+  products: [],
+  categories: [],
+  brands: [],
+  customers: [],
+  suppliers: [],
+  purchases: [],
+  sales: [],
+  returns: [],
+  customerPayments: [],
+  supplierPayments: [],
+  expenses: [],
+  settings: {
+    vatRate: 15,
+    currency: "SAR",
+    business: {
+      name: "",
+      cr: "",
+      vat: "",
+      phone: "",
+      email: "",
+      address: ""
+    }
+  },
+  counters: {
+    purchase: 1,
+    sale: 1,
+    return: 1,
+    expense: 1
+  }
+};
+
+function loadDB() {
+  const raw = localStorage.getItem(DB_KEY);
+  if (raw) {
+    try { db = JSON.parse(raw); } catch (e) {}
+  }
+}
+
+function saveDB() {
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+}
+
+function fmt(n) {
+  return (Number(n) || 0).toFixed(2);
+}
+
+function nowDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getVatRate() {
+  return Number(db.settings.vatRate) || 0;
+}
+
+function findById(arr, id) {
+  return arr.find(x => x.id === id);
+}
+
+/* =========================
+   NAVIGATION
+   ========================= */
+const navButtons = document.querySelectorAll(".nav-btn");
+const sections = document.querySelectorAll(".page-section");
+
+navButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const sec = btn.dataset.section;
+
+    navButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    sections.forEach(s => s.classList.toggle("active", s.id === sec));
+
+    if (sec === "dashboard") renderDashboard();
+    if (sec === "products") renderProducts();
+    if (sec === "categories") renderCategoriesBrands();
+    if (sec === "customers") renderCustomers();
+    if (sec === "suppliers") renderSuppliers();
+    if (sec === "purchases") renderPurchases();
+    if (sec === "sales") renderSales();
+    if (sec === "payments") renderPayments();
+    if (sec === "expenses") renderExpenses();
+    if (sec === "returns") renderReturns();
+    if (sec === "tax") renderTax();
+    if (sec === "settings") loadSettingsForm();
+    if (sec === "invoice") renderInvoiceRefs();
+  });
+});
+
+/* =========================
+   PRODUCTS
+   ========================= */
+const prodName = document.getElementById("prodName");
+const prodCategory = document.getElementById("prodCategory");
+const prodBrand = document.getElementById("prodBrand");
+const prodLowAlert = document.getElementById("prodLowAlert");
+const productsBody = document.getElementById("productsBody");
+const productSearch = document.getElementById("productSearch");
+
+document.getElementById("btnAddProduct").addEventListener("click", () => {
+  const name = prodName.value.trim();
+  if (!name) return;
+
+  db.products.push({
+    id: Date.now(),
+    name,
+    categoryId: prodCategory.value || null,
+    brandId: prodBrand.value || null,
+    stock: 0,
+    lowAlert: Number(prodLowAlert.value) || 0
+  });
+
+  prodName.value = "";
+  prodLowAlert.value = "0";
+
+  saveDB();
+  renderProducts();
+});
+
+function renderProducts() {
+  renderCategoriesBrands();
+
+  const q = (productSearch.value || "").toLowerCase();
+  productsBody.innerHTML = "";
+
+  db.products
+    .filter(p => !q || p.name.toLowerCase().includes(q))
+    .forEach((p, i) => {
+      const cat = findById(db.categories, p.categoryId) || {};
+      const br = findById(db.brands, p.brandId) || {};
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${p.name}</td>
+        <td>${cat.name || "-"}</td>
+        <td>${br.name || "-"}</td>
+        <td>${p.stock}</td>
+        <td>${p.lowAlert}</td>
+        <td><button class="btn small btn-danger" data-id="${p.id}">Delete</button></td>
+      `;
+      productsBody.appendChild(tr);
+    });
+
+  productsBody.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      db.products = db.products.filter(p => p.id !== id);
+      saveDB();
+      renderProducts();
+    });
+  });
+}
+
+productSearch.addEventListener("input", renderProducts);
+
+/* =========================
+   CATEGORIES & BRANDS
+   ========================= */
+const catName = document.getElementById("catName");
+const categoriesBody = document.getElementById("categoriesBody");
+const brandName = document.getElementById("brandName");
+const brandsBody = document.getElementById("brandsBody");
+
+document.getElementById("btnAddCategory").addEventListener("click", () => {
+  const name = catName.value.trim();
+  if (!name) return;
+
+  db.categories.push({ id: Date.now(), name });
+  catName.value = "";
+  saveDB();
+  renderCategoriesBrands();
+  renderProducts();
+});
+
+document.getElementById("btnAddBrand").addEventListener("click", () => {
+  const name = brandName.value.trim();
+  if (!name) return;
+
+  db.brands.push({ id: Date.now(), name });
+  brandName.value = "";
+  saveDB();
+  renderCategoriesBrands();
+  renderProducts();
+});
+
+function renderCategoriesBrands() {
+  categoriesBody.innerHTML = "";
+  db.categories.forEach((c, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${c.name}</td>
+      <td><button class="btn small btn-danger" data-id="${c.id}" data-type="cat">Delete</button></td>
+    `;
+    categoriesBody.appendChild(tr);
+  });
+
+  brandsBody.innerHTML = "";
+  db.brands.forEach((b, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${b.name}</td>
+      <td><button class="btn small btn-danger" data-id="${b.id}" data-type="brand">Delete</button></td>
+    `;
+    brandsBody.appendChild(tr);
+  });
+
+  prodCategory.innerHTML = `<option value="">--None--</option>`;
+  db.categories.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.name;
+    prodCategory.appendChild(opt);
+  });
+
+  prodBrand.innerHTML = `<option value="">--None--</option>`;
+  db.brands.forEach(b => {
+    const opt = document.createElement("option");
+    opt.value = b.id;
+    opt.textContent = b.name;
+    prodBrand.appendChild(opt);
+  });
+
+  categoriesBody.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      db.categories = db.categories.filter(c => c.id !== id);
+      saveDB();
+      renderCategoriesBrands();
+      renderProducts();
+    });
+  });
+
+  brandsBody.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      db.brands = db.brands.filter(b => b.id !== id);
+      saveDB();
+      renderCategoriesBrands();
+      renderProducts();
+    });
+  });
+}
+
+/* =========================
+   CUSTOMERS
+   ========================= */
+const custName = document.getElementById("custName");
+const custPhone = document.getElementById("custPhone");
+const customersBody = document.getElementById("customersBody");
+const customerSearch = document.getElementById("customerSearch");
+
+document.getElementById("btnAddCustomer").addEventListener("click", () => {
+  const name = custName.value.trim();
+  if (!name) return;
+
+  db.customers.push({
+    id: Date.now(),
+    name,
+    phone: custPhone.value.trim()
+  });
+
+  custName.value = "";
+  custPhone.value = "";
+  saveDB();
+  renderCustomers();
+});
+
+function calcCustomerBalance(custId) {
+  const sales = db.sales.filter(s => s.customerId === custId);
+  const totalSales = sales.reduce((a, s) => a + s.total, 0);
+  const paidSales = sales.reduce((a, s) => a + s.paid, 0);
+
+  const extraPayments = db.customerPayments
+    .filter(p => p.customerId === custId)
+    .reduce((a, p) => a + p.amount, 0);
+
+  const totalPaid = paidSales + extraPayments;
+  return { totalSales, totalPaid, balance: totalSales - totalPaid };
+}
+
+function renderCustomers() {
+  const q = (customerSearch.value || "").toLowerCase();
+  customersBody.innerHTML = "";
+
+  db.customers
+    .filter(c => !q || c.name.toLowerCase().includes(q))
+    .forEach((c, i) => {
+      const bal = calcCustomerBalance(c.id);
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${c.name}</td>
+        <td>${c.phone || "-"}</td>
+        <td>${fmt(bal.totalSales)}</td>
+        <td>${fmt(bal.totalPaid)}</td>
+        <td>${fmt(bal.balance)}</td>
+        <td><button class="btn small btn-danger" data-id="${c.id}">Delete</button></td>
+      `;
+      customersBody.appendChild(tr);
+    });
+
+  customersBody.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      db.customers = db.customers.filter(c => c.id !== id);
+      saveDB();
+      renderCustomers();
+    });
+  });
+}
+
+customerSearch.addEventListener("input", renderCustomers);
+
+/* =========================
+   SUPPLIERS
+   ========================= */
+const supName = document.getElementById("supName");
+const suppliersBody = document.getElementById("suppliersBody");
+const supplierSearch = document.getElementById("supplierSearch");
+
+document.getElementById("btnAddSupplier").addEventListener("click", () => {
+  const name = supName.value.trim();
+  if (!name) return;
+
+  db.suppliers.push({ id: Date.now(), name });
+  supName.value = "";
+  saveDB();
+  renderSuppliers();
+});
+
+function calcSupplierBalance(supId) {
+  const purchases = db.purchases.filter(p => p.supplierId === supId);
+  const totalPurchases = purchases.reduce((a, p) => a + p.total, 0);
+  const paidPurchases = purchases.reduce((a, p) => a + p.paid, 0);
+
+  const extraPayments = db.supplierPayments
+    .filter(p => p.supplierId === supId)
+    .reduce((a, p) => a + p.amount, 0);
+
+  const totalPaid = paidPurchases + extraPayments;
+  return { totalPurchases, totalPaid, balance: totalPurchases - totalPaid };
+}
+
+function renderSuppliers() {
+  const q = (supplierSearch.value || "").toLowerCase();
+  suppliersBody.innerHTML = "";
+
+  db.suppliers
+    .filter(s => !q || s.name.toLowerCase().includes(q))
+    .forEach((s, i) => {
+      const bal = calcSupplierBalance(s.id);
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${s.name}</td>
+        <td>${fmt(bal.totalPurchases)}</td>
+        <td>${fmt(bal.totalPaid)}</td>
+        <td>${fmt(bal.balance)}</td>
+        <td><button class="btn small btn-danger" data-id="${s.id}">Delete</button></td>
+      `;
+      suppliersBody.appendChild(tr);
+    });
+
+  suppliersBody.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      db.suppliers = db.suppliers.filter(s => s.id !== id);
+      saveDB();
+      renderSuppliers();
+    });
+  });
+}
+
+supplierSearch.addEventListener("input", renderSuppliers);
+/* =========================
+   PURCHASES
+   ========================= */
+const purchaseSupplier = document.getElementById("purchaseSupplier");
+const purchaseVat = document.getElementById("purchaseVat");
+const purchasePaid = document.getElementById("purchasePaid");
+const purchaseDiscountType = document.getElementById("purchaseDiscountType");
+const purchaseDiscount = document.getElementById("purchaseDiscount");
+const purchaseItemsBody = document.getElementById("purchaseItemsBody");
+const purchasesBody = document.getElementById("purchasesBody");
+
+document.getElementById("btnAddPurchaseItemRow").addEventListener("click", () => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>
+      <select class="purchase-product">
+        <option value="">--Select--</option>
+        ${db.products.map(p => `<option value="${p.id}">${p.name}</option>`).join("")}
+      </select>
+    </td>
+    <td><input type="number" class="purchase-qty" min="1" value="1"></td>
+    <td><input type="number" class="purchase-cost" min="0" step="0.01" value="0"></td>
+    <td><input type="number" class="purchase-ship" min="0" step="0.01" value="0"></td>
+    <td><button class="btn small btn-danger remove-row">X</button></td>
+  `;
+  purchaseItemsBody.appendChild(tr);
+
+  tr.querySelector(".remove-row").addEventListener("click", () => tr.remove());
+});
+
+document.getElementById("btnAddPurchase").addEventListener("click", () => {
+  const supplierId = Number(purchaseSupplier.value);
+  if (!supplierId) return;
+
+  const items = [];
+  let subtotal = 0;
+  let shipping = 0;
+
+  purchaseItemsBody.querySelectorAll("tr").forEach(tr => {
+    const pid = Number(tr.querySelector(".purchase-product").value);
+    const qty = Number(tr.querySelector(".purchase-qty").value);
+    const cost = Number(tr.querySelector(".purchase-cost").value);
+    const ship = Number(tr.querySelector(".purchase-ship").value);
+
+    if (!pid || qty <= 0) return;
+
+    items.push({ productId: pid, qty, cost, ship });
+    subtotal += qty * cost;
+    shipping += ship;
+  });
+
+  if (!items.length) return;
+
+  let discount = Number(purchaseDiscount.value) || 0;
+  let vat = 0;
+  const rate = getVatRate() / 100;
+
+  if (purchaseDiscountType.value === "before") {
+    const base = Math.max(subtotal - discount, 0);
+    vat = purchaseVat.checked ? base * rate : 0;
+  } else {
+    vat = purchaseVat.checked ? subtotal * rate : 0;
+    subtotal = Math.max(subtotal - discount, 0);
+  }
+
+  const total = subtotal + shipping + vat;
+  const paid = Math.min(Number(purchasePaid.value) || 0, total);
+
+  const id = db.counters.purchase++;
+
+  db.purchases.push({
+    id,
+    supplierId,
+    items,
+    subtotal,
+    shipping,
+    discount,
+    vat,
+    total,
+    paid,
+    date: nowDate()
+  });
+
+  // Update stock
+  items.forEach(it => {
+    const p = findById(db.products, it.productId);
+    if (p) p.stock += it.qty;
+  });
+
+  purchaseItemsBody.innerHTML = "";
+  purchasePaid.value = "0";
+  purchaseDiscount.value = "0";
+
+  saveDB();
+  renderPurchases();
+  renderProducts();
+  renderSuppliers();
+  renderDashboard();
+  renderTax();
+});
+
+function renderPurchases() {
+  purchaseSupplier.innerHTML = `<option value="">--Select--</option>`;
+  db.suppliers.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = s.name;
+    purchaseSupplier.appendChild(opt);
+  });
+
+  purchasesBody.innerHTML = "";
+  db.purchases.forEach(p => {
+    const sup = findById(db.suppliers, p.supplierId) || {};
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p.id}</td>
+      <td>${sup.name || "-"}</td>
+      <td>${p.items.length}</td>
+      <td>${fmt(p.subtotal)}</td>
+      <td>${fmt(p.shipping)}</td>
+      <td>${fmt(p.vat)}</td>
+      <td>${fmt(p.total)}</td>
+      <td>${fmt(p.paid)}</td>
+      <td>${fmt(p.total - p.paid)}</td>
+      <td>${p.date}</td>
+    `;
+    purchasesBody.appendChild(tr);
+  });
+}
+
+/* =========================
+   SALES
+   ========================= */
+const saleCustomer = document.getElementById("saleCustomer");
+const saleVat = document.getElementById("saleVat");
+const salePaid = document.getElementById("salePaid");
+const saleDiscount = document.getElementById("saleDiscount");
+const saleDelivery = document.getElementById("saleDelivery");
+const saleItemsBody = document.getElementById("saleItemsBody");
+const salesBody = document.getElementById("salesBody");
+
+document.getElementById("btnAddSaleItemRow").addEventListener("click", () => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>
+      <select class="sale-product">
+        <option value="">--Select--</option>
+        ${db.products.map(p => `<option value="${p.id}">${p.name}</option>`).join("")}
+      </select>
+    </td>
+    <td><input type="number" class="sale-qty" min="1" value="1"></td>
+    <td><input type="number" class="sale-price" min="0" step="0.01" value="0"></td>
+    <td><button class="btn small btn-danger remove-row">X</button></td>
+  `;
+  saleItemsBody.appendChild(tr);
+
+  tr.querySelector(".remove-row").addEventListener("click", () => tr.remove());
+});
+
+document.getElementById("btnAddSale").addEventListener("click", () => {
+  const customerId = Number(saleCustomer.value);
+  if (!customerId) return;
+
+  const items = [];
+  let subtotal = 0;
+
+  saleItemsBody.querySelectorAll("tr").forEach(tr => {
+    const pid = Number(tr.querySelector(".sale-product").value);
+    const qty = Number(tr.querySelector(".sale-qty").value);
+    const price = Number(tr.querySelector(".sale-price").value);
+
+    if (!pid || qty <= 0) return;
+
+    items.push({ productId: pid, qty, price });
+    subtotal += qty * price;
+  });
+
+  if (!items.length) return;
+
+  const discount = Number(saleDiscount.value) || 0;
+  const delivery = Number(saleDelivery.value) || 0;
+
+  const rate = getVatRate() / 100;
+  const base = Math.max(subtotal - discount, 0);
+  const vat = saleVat.checked ? base * rate : 0;
+
+  const total = base + delivery + vat;
+  const paid = Math.min(Number(salePaid.value) || 0, total);
+
+  const id = db.counters.sale++;
+
+  db.sales.push({
+    id,
+    customerId,
+    items,
+    subtotal,
+    discount,
+    delivery,
+    vat,
+    total,
+    paid,
+    date: nowDate()
+  });
+
+  // Reduce stock
+  items.forEach(it => {
+    const p = findById(db.products, it.productId);
+    if (p) p.stock -= it.qty;
+  });
+
+  saleItemsBody.innerHTML = "";
+  salePaid.value = "0";
+  saleDiscount.value = "0";
+  saleDelivery.value = "0";
+
+  saveDB();
+  renderSales();
+  renderProducts();
+  renderCustomers();
+  renderDashboard();
+  renderTax();
+});
+
+function renderSales() {
+  saleCustomer.innerHTML = `<option value="">--Select--</option>`;
+  db.customers.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.name;
+    saleCustomer.appendChild(opt);
+  });
+
+  salesBody.innerHTML = "";
+  db.sales.forEach(s => {
+    const cust = findById(db.customers, s.customerId) || {};
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${s.id}</td>
+      <td>${cust.name || "-"}</td>
+      <td>${s.items.length}</td>
+      <td>${fmt(s.subtotal)}</td>
+      <td>${fmt(s.discount)}</td>
+      <td>${fmt(s.delivery)}</td>
+      <td>${fmt(s.vat)}</td>
+      <td>${fmt(s.total)}</td>
+      <td>${fmt(s.paid)}</td>
+      <td>${fmt(s.total - s.paid)}</td>
+      <td>${s.date}</td>
+    `;
+    salesBody.appendChild(tr);
+  });
+}
+
+/* =========================
+   PAYMENTS
+   ========================= */
+const payCustomer = document.getElementById("payCustomer");
+const payCustomerAmount = document.getElementById("payCustomerAmount");
+const paySupplier = document.getElementById("paySupplier");
+const paySupplierAmount = document.getElementById("paySupplierAmount");
+const customerPaymentsBody = document.getElementById("customerPaymentsBody");
+const supplierPaymentsBody = document.getElementById("supplierPaymentsBody");
+
+document.getElementById("btnAddCustomerPayment").addEventListener("click", () => {
+  const customerId = Number(payCustomer.value);
+  const amount = Number(payCustomerAmount.value) || 0;
+
+  if (!customerId || amount <= 0) return;
+
+  db.customerPayments.push({
+    id: Date.now(),
+    customerId,
+    amount,
+    date: nowDate()
+  });
+
+  payCustomerAmount.value = "";
+  saveDB();
+  renderPayments();
+  renderCustomers();
+  renderDashboard();
+});
+
+document.getElementById("btnAddSupplierPayment").addEventListener("click", () => {
+  const supplierId = Number(paySupplier.value);
+  const amount = Number(paySupplierAmount.value) || 0;
+
+  if (!supplierId || amount <= 0) return;
+
+  db.supplierPayments.push({
+    id: Date.now(),
+    supplierId,
+    amount,
+    date: nowDate()
+  });
+
+  paySupplierAmount.value = "";
+  saveDB();
+  renderPayments();
+  renderSuppliers();
+  renderDashboard();
+});
+
+function renderPayments() {
+  payCustomer.innerHTML = `<option value="">--Select--</option>`;
+  db.customers.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.name;
+    payCustomer.appendChild(opt);
+  });
+
+  paySupplier.innerHTML = `<option value="">--Select--</option>`;
+  db.suppliers.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = s.name;
+    paySupplier.appendChild(opt);
+  });
+
+  customerPaymentsBody.innerHTML = "";
+  db.customerPayments.forEach((p, i) => {
+    const cust = findById(db.customers, p.customerId) || {};
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${cust.name || "-"}</td>
+      <td>${fmt(p.amount)}</td>
+      <td>${p.date}</td>
+    `;
+    customerPaymentsBody.appendChild(tr);
+  });
+
+  supplierPaymentsBody.innerHTML = "";
+  db.supplierPayments.forEach((p, i) => {
+    const sup = findById(db.suppliers, p.supplierId) || {};
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${sup.name || "-"}</td>
+      <td>${fmt(p.amount)}</td>
+      <td>${p.date}</td>
+    `;
+    supplierPaymentsBody.appendChild(tr);
+  });
+}
+
+/* =========================
+   EXPENSES
+   ========================= */
+const expDesc = document.getElementById("expDesc");
+const expAmount = document.getElementById("expAmount");
+const expensesBody = document.getElementById("expensesBody");
+
+document.getElementById("btnAddExpense").addEventListener("click", () => {
+  const desc = expDesc.value.trim();
+  const amount = Number(expAmount.value) || 0;
+
+  if (!desc || amount <= 0) return;
+
+  const id = db.counters.expense++;
+
+  db.expenses.push({
+    id,
+    desc,
+    amount,
+    date: nowDate()
+  });
+
+  expDesc.value = "";
+  expAmount.value = "";
+
+  saveDB();
+  renderExpenses();
+  renderDashboard();
+});
+
+function renderExpenses() {
+  expensesBody.innerHTML = "";
+  db.expenses.forEach(e => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${e.id}</td>
+      <td>${e.desc}</td>
+      <td>${fmt(e.amount)}</td>
+      <td>${e.date}</td>
+    `;
+    expensesBody.appendChild(tr);
+  });
+}
+/* =========================
+   ADVANCED RETURNS
+   ========================= */
+const returnType = document.getElementById("returnType");
+const returnRefSelect = document.getElementById("returnRefSelect");
+const returnReason = document.getElementById("returnReason");
+const returnItemsBody = document.getElementById("returnItemsBody");
+
+const returnSubtotalEl = document.getElementById("returnSubtotal");
+const returnDiscountEl = document.getElementById("returnDiscount");
+const returnChargeEl = document.getElementById("returnCharge");
+const returnVatEl = document.getElementById("returnVat");
+const returnTotalEl = document.getElementById("returnTotal");
+
+const returnAdjustCharge = document.getElementById("returnAdjustCharge");
+const returnAdjustDiscount = document.getElementById("returnAdjustDiscount");
+
+const returnsBody = document.getElementById("returnsBody");
+
+returnType.addEventListener("change", renderReturnRefs);
+
+function renderReturnRefs() {
+  const type = returnType.value;
+  returnRefSelect.innerHTML = "";
+
+  if (type === "sale") {
+    db.sales.forEach(s => {
+      const cust = findById(db.customers, s.customerId) || {};
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = `S-${s.id} | ${cust.name || "-"} | ${fmt(s.total)}`;
+      returnRefSelect.appendChild(opt);
+    });
+  } else {
+    db.purchases.forEach(p => {
+      const sup = findById(db.suppliers, p.supplierId) || {};
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = `P-${p.id} | ${sup.name || "-"} | ${fmt(p.total)}`;
+      returnRefSelect.appendChild(opt);
+    });
+  }
+}
+
+returnRefSelect.addEventListener("change", loadReturnItems);
+
+function loadReturnItems() {
+  const type = returnType.value;
+  const refId = Number(returnRefSelect.value);
+  returnItemsBody.innerHTML = "";
+
+  if (!refId) return;
+
+  let source;
+  if (type === "sale") source = findById(db.sales, refId);
+  else source = findById(db.purchases, refId);
+
+  if (!source) return;
+
+  source.items.forEach((it, i) => {
+    const prod = findById(db.products, it.productId) || {};
+    const qty = it.qty;
+    const price = type === "sale" ? it.price : it.cost;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${prod.name || "-"}</td>
+      <td>${qty}</td>
+      <td><input type="number" class="return-qty" min="0" max="${qty}" value="0"></td>
+      <td>${fmt(price)}</td>
+      <td class="return-line">0.00</td>
+    `;
+    returnItemsBody.appendChild(tr);
+  });
+
+  returnItemsBody.querySelectorAll(".return-qty").forEach(input => {
+    input.addEventListener("input", calcReturnTotals);
+  });
+
+  returnAdjustCharge.addEventListener("input", calcReturnTotals);
+  returnAdjustDiscount.addEventListener("input", calcReturnTotals);
+
+  calcReturnTotals();
+}
+
+function calcReturnTotals() {
+  let subtotal = 0;
+  const type = returnType.value;
+  const rate = getVatRate() / 100;
+
+  returnItemsBody.querySelectorAll("tr").forEach(tr => {
+    const qty = Number(tr.querySelector(".return-qty").value);
+    const price = Number(tr.children[3].textContent);
+    const line = qty * price;
+
+    tr.querySelector(".return-line").textContent = fmt(line);
+    subtotal += line;
+  });
+
+  const discount = Number(returnAdjustDiscount.value) || 0;
+  const charge = Number(returnAdjustCharge.value) || 0;
+
+  const base = Math.max(subtotal - discount, 0);
+  const vat = base * rate;
+  const total = base + charge + vat;
+
+  returnSubtotalEl.textContent = fmt(subtotal);
+  returnDiscountEl.textContent = fmt(discount);
+  returnChargeEl.textContent = fmt(charge);
+  returnVatEl.textContent = fmt(vat);
+  returnTotalEl.textContent = fmt(total);
+}
+
+document.getElementById("btnSaveReturn").addEventListener("click", () => {
+  const type = returnType.value;
+  const refId = Number(returnRefSelect.value);
+  if (!refId) return;
+
+  const reason = returnReason.value.trim() || "-";
+
+  let source;
+  if (type === "sale") source = findById(db.sales, refId);
+  else source = findById(db.purchases, refId);
+
+  if (!source) return;
+
+  const items = [];
+  let subtotal = 0;
+
+  returnItemsBody.querySelectorAll("tr").forEach((tr, i) => {
+    const qty = Number(tr.querySelector(".return-qty").value);
+    if (qty <= 0) return;
+
+    const price = Number(tr.children[3].textContent);
+    const line = qty * price;
+
+    items.push({
+      productId: source.items[i].productId,
+      qty,
+      price
+    });
+
+    subtotal += line;
+  });
+
+  if (!items.length) return;
+
+  const discount = Number(returnAdjustDiscount.value) || 0;
+  const charge = Number(returnAdjustCharge.value) || 0;
+
+  const rate = getVatRate() / 100;
+  const base = Math.max(subtotal - discount, 0);
+  const vat = base * rate;
+  const total = base + charge + vat;
+
+  const id = db.counters.return++;
+
+  db.returns.push({
+    id,
+    type,
+    refId,
+    items,
+    reason,
+    subtotal,
+    discount,
+    charge,
+    vat,
+    total,
+    date: nowDate()
+  });
+
+  // STOCK REVERSAL
+  items.forEach(it => {
+    const p = findById(db.products, it.productId);
+    if (!p) return;
+
+    if (type === "sale") p.stock += it.qty;       // Sales return → stock increases
+    else p.stock -= it.qty;                       // Purchase return → stock decreases
+  });
+
+  saveDB();
+  renderReturns();
+  renderProducts();
+  renderDashboard();
+  renderTax();
+
+  returnItemsBody.innerHTML = "";
+  returnReason.value = "";
+  returnAdjustCharge.value = "0";
+  returnAdjustDiscount.value = "0";
+});
+
+function renderReturns() {
+  returnsBody.innerHTML = "";
+
+  db.returns.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${r.type === "sale" ? "Sales Return" : "Purchase Return"}</td>
+      <td>${r.type === "sale" ? "S-" + r.refId : "P-" + r.refId}</td>
+      <td>${r.reason}</td>
+      <td>${fmt(r.subtotal)}</td>
+      <td>${fmt(r.vat)}</td>
+      <td>${fmt(r.total)}</td>
+      <td>${r.date}</td>
+    `;
+    returnsBody.appendChild(tr);
+  });
+}
+
+/* =========================
+   DASHBOARD
+   ========================= */
+function renderDashboard() {
+  const totalProducts = db.products.length;
+  const totalStock = db.products.reduce((a, p) => a + p.stock, 0);
+
+  const totalPurchases = db.purchases.reduce((a, p) => a + p.total, 0);
+  const totalSales = db.sales.reduce((a, s) => a + s.total, 0);
+  const totalExpenses = db.expenses.reduce((a, e) => a + e.amount, 0);
+
+  const vatPaid = db.purchases.reduce((a, p) => a + p.vat, 0);
+  const vatCollected = db.sales.reduce((a, s) => a + s.vat, 0);
+  const vatReturns = db.returns.reduce((a, r) => a + r.vat, 0);
+
+  const netVat = vatCollected - vatPaid - vatReturns;
+
+  const customerDebt = db.customers.reduce((a, c) => a + calcCustomerBalance(c.id).balance, 0);
+  const supplierDebt = db.suppliers.reduce((a, s) => a + calcSupplierBalance(s.id).balance, 0);
+
+  const profit = totalSales - totalPurchases - totalExpenses;
+
+  statTotalProducts.textContent = totalProducts;
+  statTotalStock.textContent = totalStock;
+  statTotalPurchases.textContent = fmt(totalPurchases);
+  statTotalSales.textContent = fmt(totalSales);
+  statTotalExpenses.textContent = fmt(totalExpenses);
+  statTotalProfit.textContent = fmt(profit);
+  statVatPaid.textContent = fmt(vatPaid);
+  statVatCollected.textContent = fmt(vatCollected);
+  statVatNet.textContent = fmt(netVat);
+  statCustomerDebt.textContent = fmt(customerDebt);
+  statSupplierDebt.textContent = fmt(supplierDebt);
+}
+
+/* =========================
+   TAX SUMMARY
+   ========================= */
+function renderTax() {
+  const vatRate = getVatRate();
+  const vatPaid = db.purchases.reduce((a, p) => a + p.vat, 0);
+  const vatCollected = db.sales.reduce((a, s) => a + s.vat, 0);
+  const vatReturns = db.returns.reduce((a, r) => a + r.vat, 0);
+
+  const netVat = vatCollected - vatPaid - vatReturns;
+
+  taxVatRate.textContent = vatRate + "%";
+  taxVatPaid.textContent = fmt(vatPaid);
+  taxVatCollected.textContent = fmt(vatCollected);
+  taxVatReturns.textContent = fmt(vatReturns);
+  taxVatNet.textContent = fmt(netVat);
+
+  taxPurchasesBody.innerHTML = "";
+  db.purchases.forEach(p => {
+    const sup = findById(db.suppliers, p.supplierId) || {};
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p.id}</td>
+      <td>${sup.name || "-"}</td>
+      <td>${fmt(p.subtotal)}</td>
+      <td>${fmt(p.shipping)}</td>
+      <td>${fmt(p.vat)}</td>
+      <td>${fmt(p.total)}</td>
+      <td>${p.date}</td>
+    `;
+    taxPurchasesBody.appendChild(tr);
+  });
+
+  taxSalesBody.innerHTML = "";
+  db.sales.forEach(s => {
+    const cust = findById(db.customers, s.customerId) || {};
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${s.id}</td>
+      <td>${cust.name || "-"}</td>
+      <td>${fmt(s.subtotal)}</td>
+      <td>${fmt(s.discount)}</td>
+      <td>${fmt(s.delivery)}</td>
+      <td>${fmt(s.vat)}</td>
+      <td>${fmt(s.total)}</td>
+      <td>${s.date}</td>
+    `;
+    taxSalesBody.appendChild(tr);
+  });
+}
+
+/* =========================
+   SETTINGS
+   ========================= */
+const vatRateInput = document.getElementById("vat-rate");
+const currencySymbolInput = document.getElementById("currency-symbol");
+const businessNameInput = document.getElementById("business-name");
+const crNumberInput = document.getElementById("cr-number");
+const businessVatNumberInput = document.getElementById("business-vat-number");
+const businessPhoneInput = document.getElementById("business-phone");
+const businessEmailInput = document.getElementById("business-email");
+const businessAddressInput = document.getElementById("business-address");
+
+function loadSettingsForm() {
+  vatRateInput.value = db.settings.vatRate;
+  currencySymbolInput.value = db.settings.currency;
+
+  businessNameInput.value = db.settings.business.name;
+  crNumberInput.value = db.settings.business.cr;
+  businessVatNumberInput.value = db.settings.business.vat;
+  businessPhoneInput.value = db.settings.business.phone;
+  businessEmailInput.value = db.settings.business.email;
+  businessAddressInput.value = db.settings.business.address;
+}
+
+document.getElementById("save-settings-btn").addEventListener("click", () => {
+  db.settings.vatRate = Number(vatRateInput.value) || 0;
+  db.settings.currency = currencySymbolInput.value || "SAR";
+
+  db.settings.business.name = businessNameInput.value.trim();
+  db.settings.business.cr = crNumberInput.value.trim();
+  db.settings.business.vat = businessVatNumberInput.value.trim();
+  db.settings.business.phone = businessPhoneInput.value.trim();
+  db.settings.business.email = businessEmailInput.value.trim();
+  db.settings.business.address = businessAddressInput.value.trim();
+
+  saveDB();
+  renderDashboard();
+  renderTax();
+});
+
+/* =========================
+   INVOICE ENGINE
+   ========================= */
+const invoiceTypeSelect = document.getElementById("invoiceTypeSelect");
+const invoiceRefSelect = document.getElementById("invoiceRefSelect");
+const invoicePrintArea = document.getElementById("invoicePrintArea");
+
+invoiceTypeSelect.addEventListener("change", renderInvoiceRefs);
+
+function renderInvoiceRefs() {
+  const type = invoiceTypeSelect.value;
+  invoiceRefSelect.innerHTML = "";
+
+  if (type === "sale") {
+    db.sales.forEach(s => {
+      const cust = findById(db.customers, s.customerId) || {};
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = `S-${s.id} | ${cust.name || "-"} | ${fmt(s.total)}`;
+      invoiceRefSelect.appendChild(opt);
+    });
+  }
+
+  else if (type === "purchase") {
+    db.purchases.forEach(p => {
+      const sup = findById(db.suppliers, p.supplierId) || {};
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = `P-${p.id} | ${sup.name || "-"} | ${fmt(p.total)}`;
+      invoiceRefSelect.appendChild(opt);
+    });
+  }
+
+  else if (type === "expense") {
+    db.expenses.forEach(e => {
+      const opt = document.createElement("option");
+      opt.value = e.id;
+      opt.textContent = `E-${e.id} | ${e.desc} | ${fmt(e.amount)}`;
+      invoiceRefSelect.appendChild(opt);
+    });
+  }
+
+  else if (type === "return") {
+    db.returns.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = `${r.type === "sale" ? "RS" : "RP"}-${r.id} | ${fmt(r.total)}`;
+      invoiceRefSelect.appendChild(opt);
+    });
+  }
+}
+
+document.getElementById("btnGenerateInvoice").addEventListener("click", () => {
+  const type = invoiceTypeSelect.value;
+  const refId = Number(invoiceRefSelect.value);
+  if (!refId) return;
+
+  if (type === "sale") return renderSaleInvoice(refId);
+  if (type === "purchase") return renderPurchaseInvoice(refId);
+  if (type === "expense") return renderExpenseInvoice(refId);
+  if (type === "return") return renderReturnInvoice(refId);
+});
+
+document.getElementById("btnPrintInvoice").addEventListener("click", () => {
+  window.print();
+});
+
+function businessHeaderHtml(title, number, date) {
+  const b = db.settings.business;
+  return `
+    <div class="invoice-header">
+      <div class="invoice-header-left">
+        <div class="invoice-logo"></div>
+        <div class="invoice-business-block">
+          <div class="invoice-business-name">${b.name || "My Business"}</div>
+          <div class="invoice-business-line">CR: ${b.cr || "-"}</div>
+          <div class="invoice-business-line">VAT: ${b.vat || "-"}</div>
+          <div class="invoice-business-line">Phone: ${b.phone || "-"}</div>
+          <div class="invoice-business-line">Email: ${b.email || "-"}</div>
+          <div class="invoice-business-line">${(b.address || "").replace(/\n/g, "<br>")}</div>
+        </div>
+      </div>
+      <div class="invoice-header-right">
+        <div class="invoice-header-right-title">${title}</div>
+        <div class="invoice-header-right-line">No: ${number}</div>
+        <div class="invoice-header-right-line">Date: ${date}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSaleInvoice(id) {
+  const s = findById(db.sales, id);
+  if (!s) return;
+
+  const cust = findById(db.customers, s.customerId) || {};
+  const currency = db.settings.currency;
+
+  const itemsHtml = s.items.map((it, i) => {
+    const p = findById(db.products, it.productId) || {};
+    const line = it.qty * it.price;
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${p.name || "-"}</td>
+        <td>${it.qty}</td>
+        <td>${fmt(it.price)}</td>
+        <td>${fmt(line)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  invoicePrintArea.innerHTML = `
+    ${businessHeaderHtml("Sales Invoice", "S-" + s.id, s.date)}
+    <div class="invoice-body">
+      <div class="invoice-row">
+        <div class="invoice-col">
+          <div class="invoice-label">Customer</div>
+          <div class="invoice-value">${cust.name || "-"}</div>
+          <div class="invoice-value">${cust.phone || ""}</div>
+        </div>
+      </div>
+
+      <table class="invoice-items-table">
+        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+
+      <div class="invoice-summary">
+      <div class="invoice-summary">
+        <div class="invoice-summary-row">
+          <span>Subtotal</span><span>${fmt(s.subtotal)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>Discount</span><span>${fmt(s.discount)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>Delivery</span><span>${fmt(s.delivery)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>VAT</span><span>${fmt(s.vat)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row total">
+          <span>Total</span><span>${fmt(s.total)} ${currency}</span>
+        </div>
+      </div>
+    </div>
+    <div class="invoice-footer">
+      Thank you for your business.
+    </div>
+  `;
+}
+
+function renderPurchaseInvoice(id) {
+  const p = findById(db.purchases, id);
+  if (!p) return;
+
+  const sup = findById(db.suppliers, p.supplierId) || {};
+  const currency = db.settings.currency;
+
+  const itemsHtml = p.items.map((it, i) => {
+    const prod = findById(db.products, it.productId) || {};
+    const line = it.qty * it.cost;
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${prod.name || "-"}</td>
+        <td>${it.qty}</td>
+        <td>${fmt(it.cost)}</td>
+        <td>${fmt(line)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  invoicePrintArea.innerHTML = `
+    ${businessHeaderHtml("Purchase Invoice", "P-" + p.id, p.date)}
+    <div class="invoice-body">
+      <div class="invoice-row">
+        <div class="invoice-col">
+          <div class="invoice-label">Supplier</div>
+          <div class="invoice-value">${sup.name || "-"}</div>
+        </div>
+      </div>
+
+      <table class="invoice-items-table">
+        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Cost</th><th>Total</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+
+      <div class="invoice-summary">
+        <div class="invoice-summary-row">
+          <span>Subtotal</span><span>${fmt(p.subtotal)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>Shipping</span><span>${fmt(p.shipping)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>Discount</span><span>${fmt(p.discount)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>VAT</span><span>${fmt(p.vat)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row total">
+          <span>Total</span><span>${fmt(p.total)} ${currency}</span>
+        </div>
+      </div>
+    </div>
+    <div class="invoice-footer">
+      Purchase record.
+    </div>
+  `;
+}
+
+function renderExpenseInvoice(id) {
+  const e = findById(db.expenses, id);
+  if (!e) return;
+
+  const currency = db.settings.currency;
+
+  invoicePrintArea.innerHTML = `
+    ${businessHeaderHtml("Expense Invoice", "E-" + e.id, e.date)}
+    <div class="invoice-body">
+      <div class="invoice-row">
+        <div class="invoice-col">
+          <div class="invoice-label">Description</div>
+          <div class="invoice-value">${e.desc}</div>
+        </div>
+      </div>
+
+      <table class="invoice-items-table">
+        <thead><tr><th>#</th><th>Item</th><th>Amount</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>${e.desc}</td>
+            <td>${fmt(e.amount)} ${currency}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="invoice-summary">
+        <div class="invoice-summary-row total">
+          <span>Total</span><span>${fmt(e.amount)} ${currency}</span>
+        </div>
+      </div>
+    </div>
+    <div class="invoice-footer">
+      Expense record.
+    </div>
+  `;
+}
+
+function renderReturnInvoice(id) {
+  const r = findById(db.returns, id);
+  if (!r) return;
+
+  const currency = db.settings.currency;
+  let headerTitle = r.type === "sale" ? "Sales Return Invoice" : "Purchase Return Invoice";
+  let numberPrefix = r.type === "sale" ? "RS-" : "RP-";
+
+  let partyName = "-";
+  if (r.type === "sale") {
+    const sale = findById(db.sales, r.refId);
+    if (sale) {
+      const cust = findById(db.customers, sale.customerId) || {};
+      partyName = cust.name || "-";
+    }
+  } else {
+    const pur = findById(db.purchases, r.refId);
+    if (pur) {
+      const sup = findById(db.suppliers, pur.supplierId) || {};
+      partyName = sup.name || "-";
+    }
+  }
+
+  const itemsHtml = r.items.map((it, i) => {
+    const p = findById(db.products, it.productId) || {};
+    const line = it.qty * it.price;
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${p.name || "-"}</td>
+        <td>${it.qty}</td>
+        <td>${fmt(it.price)}</td>
+        <td>${fmt(line)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  invoicePrintArea.innerHTML = `
+    ${businessHeaderHtml(headerTitle, numberPrefix + r.id, r.date)}
+    <div class="invoice-body">
+      <div class="invoice-row">
+        <div class="invoice-col">
+          <div class="invoice-label">${r.type === "sale" ? "Customer" : "Supplier"}</div>
+          <div class="invoice-value">${partyName}</div>
+          <div class="invoice-label" style="margin-top:8px;">Reason</div>
+          <div class="invoice-value">${r.reason}</div>
+        </div>
+      </div>
+
+      <table class="invoice-items-table">
+        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+
+      <div class="invoice-summary">
+        <div class="invoice-summary-row">
+          <span>Subtotal</span><span>${fmt(r.subtotal)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>Discount</span><span>${fmt(r.discount)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>Delivery / Shipping</span><span>${fmt(r.charge)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row">
+          <span>VAT</span><span>${fmt(r.vat)} ${currency}</span>
+        </div>
+        <div class="invoice-summary-row total">
+          <span>Total</span><span>${fmt(r.total)} ${currency}</span>
+        </div>
+      </div>
+    </div>
+    <div class="invoice-footer">
+      Return record.
+    </div>
+  `;
+}
+
+/* =========================
+   EXPORT & RESET
+   ========================= */
+document.getElementById("btnExportData").addEventListener("click", () => {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+  const a = document.createElement("a");
+  a.setAttribute("href", dataStr);
+  a.setAttribute("download", "ms-core-data.json");
+  a.click();
+});
+
+document.getElementById("btnResetData").addEventListener("click", () => {
+  const code = prompt("Enter secret reset code:");
+  if (code !== "MS-CORE-RESET-2025") return;
+
+  if (!confirm("Are you sure you want to reset ALL data?")) return;
+
+  localStorage.removeItem(DB_KEY);
+  location.reload();
+});
+
+/* =========================
+   DASHBOARD / TAX DOM BINDINGS
+   ========================= */
+const statTotalProducts = document.getElementById("statTotalProducts");
+const statTotalStock = document.getElementById("statTotalStock");
+const statTotalPurchases = document.getElementById("statTotalPurchases");
+const statTotalSales = document.getElementById("statTotalSales");
+const statTotalExpenses = document.getElementById("statTotalExpenses");
+const statTotalProfit = document.getElementById("statTotalProfit");
+const statVatPaid = document.getElementById("statVatPaid");
+const statVatCollected = document.getElementById("statVatCollected");
+const statVatNet = document.getElementById("statVatNet");
+const statCustomerDebt = document.getElementById("statCustomerDebt");
+const statSupplierDebt = document.getElementById("statSupplierDebt");
+
+const taxVatRate = document.getElementById("tax-vat-rate");
+const taxVatPaid = document.getElementById("tax-vat-paid");
+const taxVatCollected = document.getElementById("tax-vat-collected");
+const taxVatReturns = document.getElementById("tax-vat-returns");
+const taxVatNet = document.getElementById("tax-vat-net");
+const taxPurchasesBody = document.getElementById("tax-purchases-body");
+const taxSalesBody = document.getElementById("tax-sales-body");
+
+/* =========================
+   INIT
+   ========================= */
+function init() {
+  loadDB();
+
+  renderCategoriesBrands();
+  renderProducts();
+  renderCustomers();
+  renderSuppliers();
+  renderPurchases();
+  renderSales();
+  renderPayments();
+  renderExpenses();
+  renderReturns();
+  renderDashboard();
+  renderTax();
+  loadSettingsForm();
+  renderReturnRefs();
+  renderInvoiceRefs();
+}
+
+document.addEventListener("DOMContentLoaded", init);
+
+/* Quick actions on side panel */
+document.querySelectorAll(".side-action-btn[data-section]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const sec = btn.dataset.section;
+    const navBtn = document.querySelector(`.nav-btn[data-section="${sec}"]`);
+    if (navBtn) navBtn.click();
+  });
+});
+</script>
+</body>
+</html>
