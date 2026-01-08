@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MS‑Core Business Manager</title>
+  <title>MS‑Core Business Manager (Google Drive)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     :root {
@@ -33,7 +33,7 @@
     .brand-logo{width:60px;height:60px;object-fit:contain}
     .brand-name{font-size:18px;font-weight:600}
     .brand-subtitle{font-size:12px;color:var(--text-soft)}
-    .nav-tabs{display:flex;gap:8px;overflow-x:auto}
+    .nav-tabs{display:flex;gap:8px;overflow-x:auto;flex:1}
     .nav-btn{
       background:transparent;border:1px solid var(--border);
       padding:8px 14px;border-radius:999px;cursor:pointer;
@@ -41,6 +41,13 @@
     }
     .nav-btn:hover{border-color:var(--gold);color:var(--gold)}
     .nav-btn.active{background:var(--gold);color:#fff;border-color:var(--gold-dark)}
+    .auth-area{display:flex;gap:8px;align-items:center}
+    .auth-status{font-size:12px;color:var(--text-soft)}
+    .auth-btn{
+      padding:6px 10px;border-radius:999px;border:1px solid var(--gold);
+      background:#fff;color:var(--gold-dark);font-size:12px;cursor:pointer;
+    }
+    .auth-btn:hover{background:var(--gold);color:#fff}
     .main-layout{display:flex;margin-top:90px;padding:20px;gap:20px}
     .side-panel{
       width:260px;background:var(--bg);border-radius:var(--radius);
@@ -201,6 +208,11 @@
     <button class="nav-btn" data-section="settings">⚙️ Settings</button>
     <button class="nav-btn" data-section="invoice">🧾 Invoice</button>
   </nav>
+  <div class="auth-area">
+    <span id="authStatus" class="auth-status">Not signed in</span>
+    <button id="btnSignIn" class="auth-btn">Sign in</button>
+    <button id="btnSignOut" class="auth-btn" style="display:none;">Sign out</button>
+  </div>
 </header>
 
 <main class="main-layout">
@@ -712,12 +724,28 @@
   </section>
 </main>
 
+<!-- Google API JS client -->
+<script src="https://apis.google.com/js/api.js"></script>
 <script>
 /* =========================
-   DATABASE
+   GOOGLE DRIVE CONFIG
    ========================= */
-const DB_KEY = "ms_core_erp_db_v3";
+// Replace with your own values from Google Cloud Console
+const CLIENT_ID = "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com";
+const API_KEY = "YOUR_API_KEY";
+const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
+const DRIVE_FILE_NAME = "ms-core-erp-db.json";
+
+let gapiInited = false;
+let gisInited = false;
+let isSignedIn = false;
+let driveFileId = null;
+
+/* =========================
+   APP DATABASE (IN MEMORY)
+   ========================= */
 let db = {
   products: [],
   categories: [],
@@ -750,31 +778,176 @@ let db = {
   }
 };
 
-function loadDB() {
-  const raw = localStorage.getItem(DB_KEY);
-  if (raw) {
-    try { db = JSON.parse(raw); } catch (e) {}
-  }
-}
-
-function saveDB() {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
-}
-
 function fmt(n) {
   return (Number(n) || 0).toFixed(2);
 }
-
 function nowDate() {
   return new Date().toISOString().slice(0, 10);
 }
-
 function getVatRate() {
   return Number(db.settings.vatRate) || 0;
 }
-
 function findById(arr, id) {
   return arr.find(x => x.id === id);
+}
+
+/* =========================
+   GOOGLE DRIVE LOAD/SAVE
+   ========================= */
+
+// Initialize gapi client
+function gapiLoaded() {
+  gapi.load("client", initClient);
+}
+
+async function initClient() {
+  try {
+    await gapi.client.init({
+      apiKey: API_KEY,
+      clientId: CLIENT_ID,
+      discoveryDocs: DISCOVERY_DOCS,
+      scope: SCOPES
+    });
+    gapiInited = true;
+    gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+    updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+  } catch (err) {
+    console.error("Error initializing gapi client", err);
+  }
+}
+
+function updateSigninStatus(signedIn) {
+  isSignedIn = signedIn;
+  const statusEl = document.getElementById("authStatus");
+  const btnIn = document.getElementById("btnSignIn");
+  const btnOut = document.getElementById("btnSignOut");
+
+  if (signedIn) {
+    statusEl.textContent = "Signed in to Google Drive";
+    btnIn.style.display = "none";
+    btnOut.style.display = "inline-block";
+    loadDBFromDrive();
+  } else {
+    statusEl.textContent = "Not signed in";
+    btnIn.style.display = "inline-block";
+    btnOut.style.display = "none";
+  }
+}
+
+function handleAuthClick() {
+  if (!gapiInited) return;
+  gapi.auth2.getAuthInstance().signIn();
+}
+
+function handleSignoutClick() {
+  if (!gapiInited) return;
+  gapi.auth2.getAuthInstance().signOut();
+}
+
+// Find or create the JSON file in Drive
+async function ensureDriveFile() {
+  if (driveFileId) return driveFileId;
+
+  // Search for existing file
+  const res = await gapi.client.drive.files.list({
+    q: "name = '" + DRIVE_FILE_NAME + "' and trashed = false",
+    fields: "files(id, name)"
+  });
+  if (res.result.files && res.result.files.length > 0) {
+    driveFileId = res.result.files[0].id;
+    return driveFileId;
+  }
+
+  // Create new file
+  const fileMetadata = {
+    name: DRIVE_FILE_NAME,
+    mimeType: "application/json"
+  };
+  const fileContent = JSON.stringify(db, null, 2);
+  const boundary = "-------314159265358979323846";
+  const delimiter = "\\r\\n--" + boundary + "\\r\\n";
+  const closeDelim = "\\r\\n--" + boundary + "--";
+
+  const multipartRequestBody =
+    delimiter +
+    "Content-Type: application/json; charset=UTF-8\\r\\n\\r\\n" +
+    JSON.stringify(fileMetadata) +
+    delimiter +
+    "Content-Type: application/json\\r\\n\\r\\n" +
+    fileContent +
+    closeDelim;
+
+  const createRes = await gapi.client.request({
+    path: "/upload/drive/v3/files",
+    method: "POST",
+    params: { uploadType: "multipart" },
+    headers: { "Content-Type": "multipart/related; boundary=" + boundary },
+    body: multipartRequestBody
+  });
+
+  driveFileId = createRes.result.id;
+  return driveFileId;
+}
+
+// Load DB from Drive
+async function loadDBFromDrive() {
+  try {
+    if (!isSignedIn) return;
+    const fileId = await ensureDriveFile();
+    const res = await gapi.client.drive.files.get({
+      fileId,
+      alt: "media"
+    });
+    if (res.result) {
+      db = res.result;
+    }
+  } catch (err) {
+    console.warn("Could not load DB from Drive, using default", err);
+  } finally {
+    initAppUI();
+  }
+}
+
+// Save DB to Drive
+async function saveDBToDrive() {
+  try {
+    if (!isSignedIn) return;
+    const fileId = await ensureDriveFile();
+    const fileContent = JSON.stringify(db, null, 2);
+    const boundary = "-------314159265358979323846";
+    const delimiter = "\\r\\n--" + boundary + "\\r\\n";
+    const closeDelim = "\\r\\n--" + boundary + "--";
+
+    const metadata = {
+      name: DRIVE_FILE_NAME,
+      mimeType: "application/json"
+    };
+
+    const multipartRequestBody =
+      delimiter +
+      "Content-Type: application/json; charset=UTF-8\\r\\n\\r\\n" +
+      JSON.stringify(metadata) +
+      delimiter +
+      "Content-Type: application/json\\r\\n\\r\\n" +
+      fileContent +
+      closeDelim;
+
+    await gapi.client.request({
+      path: "/upload/drive/v3/files/" + fileId,
+      method: "PATCH",
+      params: { uploadType: "multipart" },
+      headers: { "Content-Type": "multipart/related; boundary=" + boundary },
+      body: multipartRequestBody
+    });
+  } catch (err) {
+    console.error("Error saving DB to Drive", err);
+  }
+}
+
+// Wrapper used by app logic
+function saveDB() {
+  // fire-and-forget
+  saveDBToDrive();
 }
 
 /* =========================
@@ -1098,6 +1271,7 @@ function renderSuppliers() {
 }
 
 supplierSearch.addEventListener("input", renderSuppliers);
+
 /* =========================
    PURCHASES
    ========================= */
@@ -1271,6 +1445,13 @@ document.getElementById("btnAddSale").addEventListener("click", () => {
     const price = Number(tr.querySelector(".sale-price").value);
 
     if (!pid || qty <= 0) return;
+
+    const p = findById(db.products, pid);
+    if (!p) return;
+    if (p.stock < qty) {
+      alert(`Not enough stock for ${p.name}`);
+      return;
+    }
 
     items.push({ productId: pid, qty, price });
     subtotal += qty * price;
@@ -1490,6 +1671,7 @@ function renderExpenses() {
     expensesBody.appendChild(tr);
   });
 }
+
 /* =========================
    ADVANCED RETURNS
    ========================= */
@@ -1509,7 +1691,12 @@ const returnAdjustDiscount = document.getElementById("returnAdjustDiscount");
 
 const returnsBody = document.getElementById("returnsBody");
 
+// Prevent duplicate listeners
+returnAdjustCharge.addEventListener("input", calcReturnTotals);
+returnAdjustDiscount.addEventListener("input", calcReturnTotals);
+
 returnType.addEventListener("change", renderReturnRefs);
+returnRefSelect.addEventListener("change", loadReturnItems);
 
 function renderReturnRefs() {
   const type = returnType.value;
@@ -1534,8 +1721,6 @@ function renderReturnRefs() {
   }
 }
 
-returnRefSelect.addEventListener("change", loadReturnItems);
-
 function loadReturnItems() {
   const type = returnType.value;
   const refId = Number(returnRefSelect.value);
@@ -1543,9 +1728,9 @@ function loadReturnItems() {
 
   if (!refId) return;
 
-  let source;
-  if (type === "sale") source = findById(db.sales, refId);
-  else source = findById(db.purchases, refId);
+  let source = type === "sale"
+    ? findById(db.sales, refId)
+    : findById(db.purchases, refId);
 
   if (!source) return;
 
@@ -1569,15 +1754,11 @@ function loadReturnItems() {
     input.addEventListener("input", calcReturnTotals);
   });
 
-  returnAdjustCharge.addEventListener("input", calcReturnTotals);
-  returnAdjustDiscount.addEventListener("input", calcReturnTotals);
-
   calcReturnTotals();
 }
 
 function calcReturnTotals() {
   let subtotal = 0;
-  const type = returnType.value;
   const rate = getVatRate() / 100;
 
   returnItemsBody.querySelectorAll("tr").forEach(tr => {
@@ -1610,9 +1791,9 @@ document.getElementById("btnSaveReturn").addEventListener("click", () => {
 
   const reason = returnReason.value.trim() || "-";
 
-  let source;
-  if (type === "sale") source = findById(db.sales, refId);
-  else source = findById(db.purchases, refId);
+  let source = type === "sale"
+    ? findById(db.sales, refId)
+    : findById(db.purchases, refId);
 
   if (!source) return;
 
@@ -1666,8 +1847,8 @@ document.getElementById("btnSaveReturn").addEventListener("click", () => {
     const p = findById(db.products, it.productId);
     if (!p) return;
 
-    if (type === "sale") p.stock += it.qty;       // Sales return → stock increases
-    else p.stock -= it.qty;                       // Purchase return → stock decreases
+    if (type === "sale") p.stock += it.qty;
+    else p.stock -= it.qty;
   });
 
   saveDB();
@@ -1739,6 +1920,14 @@ function renderDashboard() {
 /* =========================
    TAX SUMMARY
    ========================= */
+const taxVatRate = document.getElementById("tax-vat-rate");
+const taxVatPaid = document.getElementById("tax-vat-paid");
+const taxVatCollected = document.getElementById("tax-vat-collected");
+const taxVatReturns = document.getElementById("tax-vat-returns");
+const taxVatNet = document.getElementById("tax-vat-net");
+const taxPurchasesBody = document.getElementById("tax-purchases-body");
+const taxSalesBody = document.getElementById("tax-sales-body");
+
 function renderTax() {
   const vatRate = getVatRate();
   const vatPaid = db.purchases.reduce((a, p) => a + p.vat, 0);
@@ -1906,7 +2095,7 @@ function businessHeaderHtml(title, number, date) {
           <div class="invoice-business-line">VAT: ${b.vat || "-"}</div>
           <div class="invoice-business-line">Phone: ${b.phone || "-"}</div>
           <div class="invoice-business-line">Email: ${b.email || "-"}</div>
-          <div class="invoice-business-line">${(b.address || "").replace(/\n/g, "<br>")}</div>
+          <div class="invoice-business-line">${(b.address || "").replace(/\\n/g, "<br>")}</div>
         </div>
       </div>
       <div class="invoice-header-right">
@@ -1955,7 +2144,6 @@ function renderSaleInvoice(id) {
         <tbody>${itemsHtml}</tbody>
       </table>
 
-      <div class="invoice-summary">
       <div class="invoice-summary">
         <div class="invoice-summary-row">
           <span>Subtotal</span><span>${fmt(s.subtotal)} ${currency}</span>
@@ -2174,39 +2362,45 @@ document.getElementById("btnResetData").addEventListener("click", () => {
 
   if (!confirm("Are you sure you want to reset ALL data?")) return;
 
-  localStorage.removeItem(DB_KEY);
-  location.reload();
+  db = {
+    products: [],
+    categories: [],
+    brands: [],
+    customers: [],
+    suppliers: [],
+    purchases: [],
+    sales: [],
+    returns: [],
+    customerPayments: [],
+    supplierPayments: [],
+    expenses: [],
+    settings: {
+      vatRate: 15,
+      currency: "SAR",
+      business: {
+        name: "",
+        cr: "",
+        vat: "",
+        phone: "",
+        email: "",
+        address: ""
+      }
+    },
+    counters: {
+      purchase: 1,
+      sale: 1,
+      return: 1,
+      expense: 1
+    }
+  };
+  saveDB();
+  initAppUI();
 });
-
-/* =========================
-   DASHBOARD / TAX DOM BINDINGS
-   ========================= */
-const statTotalProducts = document.getElementById("statTotalProducts");
-const statTotalStock = document.getElementById("statTotalStock");
-const statTotalPurchases = document.getElementById("statTotalPurchases");
-const statTotalSales = document.getElementById("statTotalSales");
-const statTotalExpenses = document.getElementById("statTotalExpenses");
-const statTotalProfit = document.getElementById("statTotalProfit");
-const statVatPaid = document.getElementById("statVatPaid");
-const statVatCollected = document.getElementById("statVatCollected");
-const statVatNet = document.getElementById("statVatNet");
-const statCustomerDebt = document.getElementById("statCustomerDebt");
-const statSupplierDebt = document.getElementById("statSupplierDebt");
-
-const taxVatRate = document.getElementById("tax-vat-rate");
-const taxVatPaid = document.getElementById("tax-vat-paid");
-const taxVatCollected = document.getElementById("tax-vat-collected");
-const taxVatReturns = document.getElementById("tax-vat-returns");
-const taxVatNet = document.getElementById("tax-vat-net");
-const taxPurchasesBody = document.getElementById("tax-purchases-body");
-const taxSalesBody = document.getElementById("tax-sales-body");
 
 /* =========================
    INIT
    ========================= */
-function init() {
-  loadDB();
-
+function initAppUI() {
   renderCategoriesBrands();
   renderProducts();
   renderCustomers();
@@ -2223,16 +2417,21 @@ function init() {
   renderInvoiceRefs();
 }
 
-document.addEventListener("DOMContentLoaded", init);
-
-/* Quick actions on side panel */
+// Quick actions on side panel
 document.querySelectorAll(".side-action-btn[data-section]").forEach(btn => {
   btn.addEventListener("click", () => {
     const sec = btn.dataset.section;
-    const navBtn = document.querySelector(`.nav-btn[data-section="${sec}"]`);
+    const navBtn = document.querySelector(\`.nav-btn[data-section="\${sec}"]\`);
     if (navBtn) navBtn.click();
   });
 });
+
+// Auth buttons
+document.getElementById("btnSignIn").addEventListener("click", handleAuthClick);
+document.getElementById("btnSignOut").addEventListener("click", handleSignoutClick);
+
+// Load gapi
+gapiLoaded();
 </script>
 </body>
 </html>
